@@ -1031,6 +1031,7 @@
     <string name="reading_time_sort">Sort by reading duration</string>
     <string name="last_read_time_sort">Sort by read time</string>
     <string name="reading_time_tag">Reading time:</string>
+    <string name="first_read_time_tag">First read time:</string>
     <string name="last_read_time_tag">Last read time:</string>
     <string name="page_touch_slop_title">Sliding Page Threshold</string>
     <string name="page_touch_slop_dialog_title">Sliding page turn threshold (0 = system default)</string>

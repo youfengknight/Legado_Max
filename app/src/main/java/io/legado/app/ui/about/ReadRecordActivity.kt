@@ -172,6 +172,11 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
             binding.apply {
                 tvBookName.text = item.bookName
                 tvReadingTime.text = formatDuring(item.readTime)
+                if (item.firstRead > 0) {
+                    tvFirstReadTime.text = dateFormat.format(item.firstRead)
+                } else {
+                    tvFirstReadTime.text = ""
+                }
                 if (item.lastRead > 0) {
                     tvLastReadTime.text = dateFormat.format(item.lastRead)
                 } else {

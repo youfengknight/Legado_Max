@@ -72,6 +72,7 @@ object ReadManga : CoroutineScope by MainScope() {
         ReadManga.book = book
         readRecord.bookName = book.name
         readRecord.readTime = appDb.readRecordDao.getReadTime(book.name) ?: 0
+        readRecord.firstRead = appDb.readRecordDao.getFirstRead(book.name) ?: 0
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()
@@ -135,6 +136,9 @@ object ReadManga : CoroutineScope by MainScope() {
             readRecord.readTime = readRecord.readTime + System.currentTimeMillis() - readStartTime
             readStartTime = System.currentTimeMillis()
             readRecord.lastRead = System.currentTimeMillis()
+            if (readRecord.firstRead == 0L) {
+                readRecord.firstRead = System.currentTimeMillis()
+            }
             appDb.readRecordDao.insert(readRecord)
         }
     }

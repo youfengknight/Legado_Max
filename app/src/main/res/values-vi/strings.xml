@@ -1018,6 +1018,7 @@
     <string name="reading_time_sort">Sắp xếp theo thời lượng đọc</string>
     <string name="last_read_time_sort">Sắp xếp theo thời gian đọc</string>
     <string name="reading_time_tag">Thời lượng đọc:</string>
+    <string name="first_read_time_tag">Thời gian đọc đầu tiên:</string>
     <string name="last_read_time_tag">Thời gian đọc cuối cùng:</string>
     <string name="page_touch_slop_title">Ngưỡng lật trang trượt</string>
     <string name="page_touch_slop_dialog_title">Ngưỡng lật trang trượt (0 = mặc định hệ thống)</string>

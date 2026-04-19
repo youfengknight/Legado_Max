@@ -1018,6 +1018,7 @@
     <string name="reading_time_sort">閱讀時長排序</string>
     <string name="last_read_time_sort">閱讀時間排序</string>
     <string name="reading_time_tag">閱讀時長：</string>
+    <string name="first_read_time_tag">最初閱讀時間：</string>
     <string name="last_read_time_tag">最後閱讀時間：</string>
     <string name="page_touch_slop_title">滑動翻頁閾值</string>
     <string name="page_touch_slop_dialog_title">滑動翻頁閾值（0 = 系統預設值）</string>

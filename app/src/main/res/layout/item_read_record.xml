@@ -45,6 +45,29 @@
         tools:text="readingTime" />
 
     <TextView
+        android:id="@+id/tv_first_read_time_tag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="6dp"
+        android:singleLine="true"
+        android:text="@string/first_read_time_tag"
+        android:textColor="@color/secondaryText"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_reading_time_tag" />
+
+    <TextView
+        android:id="@+id/tv_first_read_time"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:padding="6dp"
+        android:singleLine="true"
+        android:textColor="@color/secondaryText"
+        app:layout_constraintLeft_toRightOf="@+id/tv_first_read_time_tag"
+        app:layout_constraintTop_toBottomOf="@id/tv_reading_time_tag"
+        app:layout_constraintRight_toLeftOf="@+id/tv_remove"
+        tools:text="firstReadTime" />
+
+    <TextView
         android:id="@+id/tv_last_read_time_tag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -53,7 +76,7 @@
         android:text="@string/last_read_time_tag"
         android:textColor="@color/secondaryText"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_reading_time_tag" />
+        app:layout_constraintTop_toBottomOf="@id/tv_first_read_time_tag" />
 
     <TextView
         android:id="@+id/tv_last_read_time"
@@ -63,7 +86,7 @@
         android:singleLine="true"
         android:textColor="@color/secondaryText"
         app:layout_constraintLeft_toRightOf="@+id/tv_last_read_time_tag"
-        app:layout_constraintTop_toBottomOf="@id/tv_reading_time_tag"
+        app:layout_constraintTop_toBottomOf="@id/tv_first_read_time_tag"
         app:layout_constraintRight_toLeftOf="@+id/tv_remove"
         tools:text="readingTime" />
 
