@@ -83,6 +83,8 @@
     <string name="version">版本</string>
     <string name="local">本地</string>
     <string name="search">搜索</string>
+    <string name="query">查询</string>
+    <string name="no_explore_kind">暂无发现分类</string>
     <string name="origin_format">来源：%s</string>
     <string name="read_dur_progress">最近：%s</string>
     <string name="book_name">书名</string>

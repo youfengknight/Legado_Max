@@ -646,6 +646,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
             when (it.itemId) {
                 R.id.menu_edit -> callBack.editSource(source.bookSourceUrl)
                 R.id.menu_top -> callBack.toTop(source)
+                R.id.menu_query -> callBack.showKindQueryDialog(source)
                 R.id.menu_search -> callBack.searchBook(source)
                 R.id.menu_login -> context.startActivity<SourceLoginActivity> {
                     putExtra("type", "bookSource")
@@ -670,5 +671,6 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         fun toTop(source: BookSourcePart)
         fun deleteSource(source: BookSourcePart)
         fun searchBook(bookSource: BookSourcePart)
+        fun showKindQueryDialog(source: BookSourcePart)
     }
 }

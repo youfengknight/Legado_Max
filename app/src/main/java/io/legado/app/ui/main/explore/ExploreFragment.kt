@@ -30,6 +30,7 @@ import io.legado.app.ui.main.MainFragmentInterface
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChange
 import io.legado.app.utils.setEdgeEffectColor
+import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.transaction
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -231,6 +232,16 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         SearchActivity.start(requireContext(), bookSource)
     }
 
+    /**
+     * 显示查询对话框
+     */
+    override fun showKindQueryDialog(source: BookSourcePart) {
+        showDialogFragment(ExploreKindQueryDialog(source.bookSourceUrl, source.bookSourceName))
+    }
+    
+    /**
+     * 压缩目录
+     */
     fun compressExplore() {
         if (!adapter.compressExplore()) {
             if (AppConfig.isEInkMode) {
