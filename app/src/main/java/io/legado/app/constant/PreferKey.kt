@@ -117,6 +117,7 @@ object PreferKey {
     const val autoRefresh = "auto_refresh"
     const val onlyUpdateRead = "onlyUpdateRead"
     const val defaultToRead = "defaultToRead"
+    const val tocPartialLoad = "tocPartialLoad"
     const val exportCharset = "exportCharset"
     const val exportUseReplace = "exportUseReplace"
     const val useZhLayout = "useZhLayout"

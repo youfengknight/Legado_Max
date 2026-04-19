@@ -338,6 +338,8 @@
     <string name="book_info_edit">Edit book information</string>
     <string name="ps_default_read">Use Bookshelf as start page</string>
     <string name="pt_default_read">Auto jump to Recent list</string>
+    <string name="pt_toc_partial_load">Incomplete TOC loading</string>
+    <string name="ps_toc_partial_load">Allow entering content before TOC is fully loaded</string>
     <string name="replace_scope">Replacement object. Book name or source url is available</string>
     <string name="menu_action_group">Groups</string>
     <string name="download_path">Cache path</string>

@@ -38,6 +38,13 @@
             app:iconSpaceReserved="false" />
 
         <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="tocPartialLoad"
+            android:summary="@string/ps_toc_partial_load"
+            android:title="@string/pt_toc_partial_load"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="showDiscovery"
             android:title="@string/show_discovery"

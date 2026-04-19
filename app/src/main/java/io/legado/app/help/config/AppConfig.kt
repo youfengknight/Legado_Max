@@ -300,6 +300,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val onlyUpdateRead: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.onlyUpdateRead)
 
+    val isTocPartialLoad: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.tocPartialLoad)
+
     var enableReview: Boolean
         get() = BuildConfig.DEBUG && appCtx.getPrefBoolean(PreferKey.enableReview, false)
         set(value) {
