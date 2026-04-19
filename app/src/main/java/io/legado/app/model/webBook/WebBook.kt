@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Semaphore
 import kotlin.coroutines.CoroutineContext
 
@@ -462,6 +463,86 @@ object WebBook {
             }
         }.onFailure {
             currentCoroutineContext().ensureActive()
+        }
+    }
+
+    /**
+     * 渐进式获取章节目录（Flow方式）
+     *
+     * 与 [getChapterListAwait] 不同，此方法返回 Flow，逐页发射目录结果，
+     * 允许在目录未完全加载时就获取已解析的章节，实现"边加载边进入正文"。
+     *
+     * 处理流程与 [getChapterListAwait] 一致（登录检测、重定向、前置JS等），
+     * 区别仅在于最终调用 [BookChapterList.analyzeChapterListFlow] 而非 [BookChapterList.analyzeChapterList]。
+     *
+     * @param bookSource 书源
+     * @param book 书籍对象（需包含tocUrl）
+     * @param runPerJs 是否执行目录前置JS
+     * @param isFromBookInfo 是否从详情页跳转
+     * @return Flow<PartialChapterList> 逐页发射的目录加载结果
+     */
+    suspend fun getChapterListFlow(
+        bookSource: BookSource,
+        book: Book,
+        runPerJs: Boolean = false,
+        isFromBookInfo: Boolean = false
+    ): Flow<PartialChapterList> {
+        book.removeAllBookType()
+        book.addType(bookSource.getBookType())
+        if (runPerJs) {
+            runPreUpdateJs(bookSource, book, isFromBookInfo).getOrThrow()
+        }
+        return if (book.bookUrl == book.tocUrl && !book.tocHtml.isNullOrEmpty()) {
+            BookChapterList.analyzeChapterListFlow(
+                bookSource = bookSource,
+                book = book,
+                baseUrl = book.tocUrl,
+                redirectUrl = book.tocUrl,
+                body = book.tocHtml,
+                isFromBookInfo = isFromBookInfo
+            )
+        } else {
+            val analyzeUrl = AnalyzeUrl(
+                mUrl = book.tocUrl,
+                baseUrl = book.bookUrl,
+                source = bookSource,
+                ruleData = book,
+                coroutineContext = currentCoroutineContext()
+            )
+            val checkJs = bookSource.loginCheckJs
+            val res = kotlin.runCatching {
+                analyzeUrl.getStrResponseAwait().let {
+                    if (!checkJs.isNullOrBlank()) {
+                        analyzeUrl.evalJS(checkJs, it) as StrResponse
+                    } else {
+                        it
+                    }
+                }
+            }.getOrElse { throwable ->
+                if (!checkJs.isNullOrBlank()) {
+                    val errResponse = analyzeUrl.getErrStrResponse(throwable)
+                    try {
+                        (analyzeUrl.evalJS(checkJs, errResponse) as StrResponse).also {
+                            if (it.code() == 500) {
+                                throw throwable
+                            }
+                        }
+                    } catch (_: Throwable) {
+                        throw throwable
+                    }
+                } else {
+                    throw throwable
+                }
+            }
+            checkRedirect(bookSource, res)
+            BookChapterList.analyzeChapterListFlow(
+                bookSource = bookSource,
+                book = book,
+                baseUrl = book.tocUrl,
+                redirectUrl = res.url,
+                body = res.body,
+                isFromBookInfo = isFromBookInfo
+            )
         }
     }
 

@@ -27,6 +27,11 @@ import java.util.Date
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.help.webView.WebJsExtensions.Companion.JS_INJECTION2
 
+/**
+ * WebView 视图模型
+ * 管理 WebView 数据，包括源信息、URL、HTML 内容等
+ * 支持图片保存、源验证结果保存、源禁用/删除等功能
+ */
 class WebViewModel(application: Application) : BaseViewModel(application) {
     var source: BaseSource? = null
     var intent: Intent? = null
@@ -40,6 +45,12 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
     var sourceOrigin: String = ""
     var sourceType = SourceType.book
 
+    /**
+     * 初始化数据
+     * 从 Intent 中提取 URL、源信息等，并解析请求头
+     * @param intent 包含初始化数据的 Intent
+     * @param success 初始化成功回调
+     */
     fun initData(
         intent: Intent,
         success: () -> Unit
@@ -83,6 +94,12 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 保存网页图片
+     * 支持从 URL 或 Base64 数据保存图片
+     * @param webPic 图片 URL 或 Base64 数据
+     * @param path 保存路径
+     */
     fun saveImage(webPic: String?, path: String) {
         webPic ?: return
         execute {
@@ -102,6 +119,12 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 将网页数据转换为字节数组
+     * 支持 URL 和 Base64 格式
+     * @param data 图片数据（URL 或 Base64）
+     * @return 图片字节数组
+     */
     private suspend fun webData2bitmap(data: String): ByteArray? {
         return if (URLUtil.isValidUrl(data)) {
             okHttpClient.newCallResponseBody {
@@ -112,6 +135,12 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 保存源验证结果
+     * 用于 Cloudflare 等验证通过后保存验证信息
+     * @param WebView 用于获取页面 HTML 内容
+     * @param success 保存成功回调
+     */
     fun saveVerificationResult(webView: WebView, success: () -> Unit) {
         if (!sourceVerificationEnable) {
             return success.invoke()
@@ -144,6 +173,10 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 禁用源
+     * @param block 禁用成功回调
+     */
     fun disableSource(block: () -> Unit) {
         execute {
             SourceHelp.enableSource(sourceOrigin, sourceType, false)
@@ -152,6 +185,10 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 删除源
+     * @param block 删除成功回调
+     */
     fun deleteSource(block: () -> Unit) {
         execute {
             SourceHelp.deleteSource(sourceOrigin, sourceType)

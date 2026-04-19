@@ -1013,7 +1013,15 @@ object ReadBook : CoroutineScope by MainScope() {
         }
     }
 
-    fun onChapterListUpdated(newBook: Book, loadContent: Boolean = true) {
+    /**
+     * 目录更新回调
+     *
+     * @param newBook 更新后的书籍对象
+     * @param loadContent 是否重新加载正文内容
+     * @param isIncremental 是否为增量更新（渐进加载中间过程）。
+     *   增量更新时只刷新目录视图，不重新加载正文，避免打断用户阅读
+     */
+    fun onChapterListUpdated(newBook: Book, loadContent: Boolean = true, isIncremental: Boolean = false) {
         if (newBook.isSameNameAuthor(book)) {
             book = newBook
             chapterSize = newBook.totalChapterNum
@@ -1024,7 +1032,7 @@ object ReadBook : CoroutineScope by MainScope() {
             callBack?.upMenuView()
             if (callBack == null) {
                 clearTextChapter()
-            } else if (loadContent) {
+            } else if (!isIncremental && loadContent) {
                 loadContent(true)
             }
         }

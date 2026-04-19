@@ -65,6 +65,11 @@ import androidx.core.graphics.createBitmap
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
 
+/**
+ * WebView 浏览器活动
+ * 用于显示网页内容，支持源验证、图片保存、全屏浏览等功能
+ * 使用 WebViewPool 管理 WebView 实例，提高性能和内存利用率
+ */
 class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     companion object {
         // 是否输出日志
@@ -94,6 +99,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         currentWebView.reload()
     }
 
+    /**
+     * 活动创建时初始化
+     * 从 WebViewPool 获取 WebView 实例，加载 URL 或 HTML 内容
+     */
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         pooledWebView = WebViewPool.acquire(this)
         currentWebView = pooledWebView.realWebView
@@ -225,6 +234,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     //实现starBrowser调起页面全屏
+    /**
+     * 切换全屏模式
+     * 显示/隐藏系统状态栏和操作栏
+     */
     private fun toggleFullScreen() {
         isFullScreen = !isFullScreen
         toggleSystemBar(!isFullScreen)
@@ -236,6 +249,12 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
+    /**
+     * 初始化 WebView 设置
+     * 配置 WebView 客户端、JavaScript 接口、下载监听器等
+     * @param url 要加载的 URL
+     * @param headerMap 请求头信息
+     */
     private fun initWebView(url: String, headerMap: HashMap<String, String>) {
         binding.progressBar.fontColor = accentColor
         currentWebView.webChromeClient = CustomWebChromeClient()
@@ -342,6 +361,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     @Suppress("unused")
+    /**
+     * JavaScript 接口类
+     * 用于网页与原生代码交互，支持锁定屏幕方向和关闭页面
+     */
     private class JSInterface(activity: WebViewActivity) {
         private val activityRef: WeakReference<WebViewActivity> = WeakReference(activity)
         @JavascriptInterface
@@ -373,6 +396,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         }
     }
 
+    /**
+     * 自定义 WebChromeClient
+     * 处理网页进度、全屏视频播放、控制台日志等
+     */
     inner class CustomWebChromeClient : WebChromeClient() {
         override fun getDefaultVideoPoster(): Bitmap {
             return super.getDefaultVideoPoster() ?: createBitmap(100, 100)
@@ -423,6 +450,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         
     }
 
+    /**
+     * 自定义 WebViewClient
+     * 处理页面加载、URL 跳转、SSL 错误等
+     */
     inner class CustomWebViewClient : WebViewClient() {
         override fun shouldOverrideUrlLoading(
             view: WebView?,

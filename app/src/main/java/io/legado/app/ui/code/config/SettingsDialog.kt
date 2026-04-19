@@ -21,17 +21,27 @@ import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
+/**
+ * 编辑器设置对话框
+ * 用于配置代码编辑器的字体大小、自动补全、不可见字符显示等
+ */
 class SettingsDialog(private val context: Context, private val callBack: CallBack) :
     BaseDialogFragment(R.layout.dialog_edit_settings) {
     private val binding by viewBinding(DialogEditSettingsBinding::bind)
     private val editNonPrintable = AppConfig.editNonPrintable
 
+    /**
+     * 片段创建时初始化
+     */
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         initData()
         initView()
     }
 
-
+    /**
+     * 初始化数据
+     * 加载当前编辑器设置
+     */
     @SuppressLint("SetTextI18n")
     private fun initData() {
         binding.run {
@@ -46,6 +56,10 @@ class SettingsDialog(private val context: Context, private val callBack: CallBac
         }
     }
 
+    /**
+     * 初始化视图
+     * 设置字体大小选择和自动补全开关的监听器
+     */
     @SuppressLint("SetTextI18n")
     private fun initView() {
         binding.run {
@@ -73,6 +87,10 @@ class SettingsDialog(private val context: Context, private val callBack: CallBac
         }
     }
 
+    /**
+     * 对话框关闭时保存设置
+     * 保存不可见字符显示标志
+     */
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
         binding.run {
@@ -102,9 +120,18 @@ class SettingsDialog(private val context: Context, private val callBack: CallBac
         }
     }
 
+    /**
+     * 将字体缩放值转换为显示字符串
+     * @return 格式化后的字体大小字符串
+     */
     private fun Int.toFontSizeStr(): String {
         return context.getString(R.string.font_size, this)
     }
+
+    /**
+     * 回调接口
+     * 用于通知编辑器设置更改
+     */
     interface CallBack {
         fun upEdit(fontSize: Int? = null, autoComplete: Boolean? = null, autoWarp: Boolean? = null, editNonPrintable: Int? = null)
     }

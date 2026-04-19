@@ -40,6 +40,11 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
+/**
+ * 代码编辑活动
+ * 提供代码编辑功能，支持语法高亮、搜索替换、格式化等
+ * 使用 Sora Editor 作为编辑器核心，支持 TextMate 语法高亮
+ */
 class CodeEditActivity :
     VMBaseActivity<ActivityCodeEditBinding, CodeEditViewModel>(),
     KeyboardToolPop.CallBack, ChangeThemeDialog.CallBack, SettingsDialog.CallBack {
@@ -63,6 +68,10 @@ class CodeEditActivity :
         get() = AppConfig.editTemeAuto && ThemeConfig.isDarkTheme()
     private var themeIndex = -1
 
+    /**
+     * 活动创建时初始化
+     * 配置编辑器、加载文本内容、设置光标位置
+     */
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
         editor.colorScheme = TextMateColorScheme2.create(ThemeRegistry.getInstance()) //先设置颜色,避免一开始的白屏
@@ -87,6 +96,10 @@ class CodeEditActivity :
         initView()
     }
 
+    /**
+     * 初始化视图
+     * 设置软键盘监听器
+     */
     private fun initView() {
         binding.root.setOnApplyWindowInsetsListenerCompat { _, windowInsets ->
             softKeyboardTool.initialPadding = windowInsets.imeHeight
@@ -102,7 +115,9 @@ class CodeEditActivity :
 
     /**
      * 使用super.finish(),防止循环回调
-     * */
+     * 保存编辑内容并退出
+     * @param check 是否检查未保存更改
+     */
     private fun save(check: Boolean) {
         if (!viewModel.writable) return super.finish()
         val text = editor.text.toString()
@@ -143,6 +158,13 @@ class CodeEditActivity :
         }
     }
 
+    /**
+     * 更新编辑器设置
+     * @param fontSize 字体大小
+     * @param autoComplete 是否启用自动补全
+     * @param autoWarp 是否启用自动换行
+     * @param editNonPrintable 不可见字符显示标志
+     */
     override fun upEdit(fontSize: Int?, autoComplete: Boolean?, autoWarp: Boolean?, editNonPrintable: Int?) {
         if (fontSize != null) {
             editor.setTextSize(fontSize.toFloat())
@@ -159,6 +181,10 @@ class CodeEditActivity :
         }
     }
 
+    /**
+     * 初始化主题
+     * 根据系统主题自动切换编辑器主题
+     */
     override fun initTheme() {
         super.initTheme()
         if (!isInitialized) {
@@ -174,6 +200,10 @@ class CodeEditActivity :
         themeIndex = index
     }
 
+    /**
+     * 更新编辑器主题
+     * @param index 主题索引
+     */
     override fun upTheme(index: Int) {
         if (themeIndex != index) {
             viewModel.loadTextMateThemes(index)
@@ -195,6 +225,10 @@ class CodeEditActivity :
         return super.onPrepareOptionsMenu(menu)
     }
 
+    /**
+     * 设置搜索选项
+     * 根据是否使用正则表达式配置搜索参数
+     */
     private fun setSearchOptions() {
         searchOptions =  SearchOptions(
             if (isRegex) SearchOptions.TYPE_REGULAR_EXPRESSION else SearchOptions.TYPE_NORMAL,
@@ -203,6 +237,10 @@ class CodeEditActivity :
         )
     }
 
+    /**
+     * 显示搜索界面
+     * 配置搜索、替换功能的事件监听器
+     */
     private fun search() {
         if (binding.searchGroup.isVisible) return
         binding.switchRegex.run {
@@ -290,6 +328,10 @@ class CodeEditActivity :
         }
     }
 
+    /**
+     * 执行搜索
+     * @param txt 搜索文本
+     */
     private fun searchTxt(txt: String) {
         if (txt.isNotEmpty()) {
             try {
@@ -305,6 +347,10 @@ class CodeEditActivity :
     }
 
     @SuppressLint("SetTextI18n")
+    /**
+     * 更新搜索结果显示
+     * 显示当前匹配位置和总匹配数
+     */
     private fun updateSearchResults() {
         if (editorSearcher.hasQuery()) {
             val totalResults = editorSearcher.matchedPositionCount
@@ -331,6 +377,10 @@ class CodeEditActivity :
         return super.onCompatOptionsItemSelected(item)
     }
 
+    /**
+     * 退出时保存
+     * 检查是否有未保存的更改
+     */
     override fun finish() {
         save(true)
     }
@@ -353,6 +403,11 @@ class CodeEditActivity :
         }
     }
 
+    /**
+     * 发送文本到当前焦点视图
+     * 支持普通输入框和代码编辑器
+     * @param text 要插入的文本
+     */
     override fun sendText(text: String) {
         val view = window.decorView.findFocus()
         if (view is TextInputEditText) {
@@ -378,11 +433,17 @@ class CodeEditActivity :
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
+    /**
+     * 撤销操作
+     */
     override fun onUndoClicked() {
         editor.undo()
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
+    /**
+     * 重做操作
+     */
     override fun onRedoClicked() {
         editor.redo()
     }

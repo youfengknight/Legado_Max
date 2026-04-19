@@ -29,6 +29,7 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.webBook.PartialChapterList
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.entities.TextChapter
@@ -129,8 +130,37 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
         if (book.isLocal && !checkLocalBookFileExist(book)) {
             return
         }
-        if ((ReadBook.chapterSize == 0 || book.isLocalModified()) && !loadChapterListAwait(book)) {
-            return
+        if (ReadBook.chapterSize == 0 || book.isLocalModified()) {
+            // 根据设置选择目录加载方式
+            if (AppConfig.isTocPartialLoad && !book.isLocal) {
+                // 渐进加载：目录边加载边展示，加载到阅读位置即可进入正文
+                val (success, contentLoaded) = loadChapterListProgressive(book)
+                if (!success) {
+                    return
+                }
+                if (contentLoaded) {
+                    // 渐进加载已提前进入正文，跳过后续的loadContent，直接执行进度同步等收尾逻辑
+                    if (ReadBook.chapterChanged) {
+                        ReadBook.chapterChanged = false
+                    } else if (ReadBook.inBookshelf) {
+                        if (AppConfig.syncBookProgressPlus) {
+                            ReadBook.syncProgress({ progress -> ReadBook.callBack?.sureNewProgress(progress) })
+                        } else {
+                            syncBookProgress(book)
+                        }
+                    }
+                    if (!book.isLocal && ReadBook.bookSource == null) {
+                        autoChangeSource(book.name, book.author)
+                        return
+                    }
+                    return
+                }
+            } else {
+                // 完整加载：等待目录全部加载完再进入正文（原有行为）
+                if (!loadChapterListAwait(book)) {
+                    return
+                }
+            }
         }
         ReadBook.upMsg(null)
         if (!isSameBook) {
@@ -247,6 +277,66 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
             }
         }
         return true
+    }
+
+    /**
+     * 渐进式加载目录
+     *
+     * 通过 Flow 逐页收集目录，每收到一批章节就保存到数据库并刷新目录视图。
+     * 当已加载的章节覆盖到当前阅读位置时，立即加载正文内容，无需等待目录全部加载完。
+     * 剩余目录页继续在后台加载，每页完成后增量更新目录视图。
+     *
+     * @param book 书籍对象
+     * @return Pair<成功与否, 是否已提前加载正文>
+     *   - 第一个值：目录加载是否成功（即使中途出错，若已进入正文也返回true）
+     *   - 第二个值：是否已在渐进过程中提前加载了正文（若是，initBook应跳过后续loadContent）
+     */
+    private suspend fun loadChapterListProgressive(book: Book): Pair<Boolean, Boolean> {
+        val source = ReadBook.bookSource ?: return Pair(true, false)
+        val oldBook = book.copy()
+        var hasEnteredContent = false
+        try {
+            WebBook.getChapterListFlow(source, book, true).collect { partial ->
+                if (partial.chapters.isEmpty()) return@collect
+                val chapters = partial.chapters
+                if (partial.isComplete) {
+                    // 目录全部加载完成：完整更新数据库和书籍信息
+                    if (oldBook.bookUrl == book.bookUrl) {
+                        appDb.bookDao.update(book)
+                    } else {
+                        appDb.bookDao.replace(oldBook, book)
+                        BookHelp.updateCacheFolder(oldBook, book)
+                    }
+                    appDb.bookChapterDao.delByBook(oldBook.bookUrl)
+                    appDb.bookChapterDao.insert(*chapters.toTypedArray())
+                    ReadBook.onChapterListUpdated(book, isIncremental = false)
+                } else {
+                    // 中间过程：增量保存章节到数据库，只刷新目录视图不加载正文
+                    appDb.bookChapterDao.delByBook(oldBook.bookUrl)
+                    appDb.bookChapterDao.insert(*chapters.toTypedArray())
+                    book.totalChapterNum = chapters.size
+                    ReadBook.onChapterListUpdated(book, loadContent = false, isIncremental = true)
+                    // 已加载章节覆盖到阅读位置时，立即进入正文
+                    if (!hasEnteredContent && book.durChapterIndex < chapters.size) {
+                        hasEnteredContent = true
+                        ReadBook.upMsg(null)
+                        ReadBook.loadContent(resetPageOffset = true) {
+                            ReadBook.bookSource?.let {
+                                SourceCallBack.callBackBook(SourceCallBack.START_READ, it, book, ReadBook.curTextChapter?.chapter)
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            currentCoroutineContext().ensureActive()
+            // 如果还没进入正文就出错了，返回失败；若已进入正文则忽略后续加载错误
+            if (!hasEnteredContent) {
+                ReadBook.upMsg(context.getString(R.string.error_load_toc))
+                return Pair(false, false)
+            }
+        }
+        return Pair(true, hasEnteredContent)
     }
 
     /**

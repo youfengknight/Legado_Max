@@ -22,11 +22,23 @@ import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapAsync
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.mozilla.javascript.Context
 import splitties.init.appCtx
 import io.legado.app.constant.AppPattern
 import kotlinx.coroutines.currentCoroutineContext
+
+/**
+ * 目录渐进加载的中间结果
+ *
+ * @property chapters 已加载的章节列表（可能不是完整的目录）
+ * @property isComplete 目录是否已全部加载完成
+ */
+data class PartialChapterList(
+    val chapters: List<BookChapter>,
+    val isComplete: Boolean
+)
 
 /**
  * 获取目录
@@ -203,6 +215,231 @@ object BookChapterList {
                     replaceBook = replaceBook
                 )
         currentCoroutineContext().ensureActive()
+        upChapterInfo(list, book)
+        return list
+    }
+
+    /**
+     * 渐进式解析章节目录
+     *
+     * 与 [analyzeChapterList] 不同，此方法通过 Flow 逐页发射目录结果，
+     * 允许调用方在目录未完全加载时就获取已解析的章节，实现"边加载边展示"。
+     *
+     * 加载策略：
+     * - 单页目录：先发射中间结果，再发射最终结果
+     * - 串行多页目录（1个nextUrl）：每加载完一页就发射一次，最后一页发射 isComplete=true
+     * - 并发多页目录（多个nextUrl）：全部加载完后只发射一次 isComplete=true
+     *
+     * @param bookSource 书源
+     * @param book 书籍对象（需包含tocUrl）
+     * @param baseUrl 基础URL
+     * @param redirectUrl 重定向后的URL
+     * @param body 页面内容
+     * @param isFromBookInfo 是否从详情页跳转
+     * @return Flow<PartialChapterList> 逐页发射的目录加载结果
+     */
+    fun analyzeChapterListFlow(
+        bookSource: BookSource,
+        book: Book,
+        baseUrl: String,
+        redirectUrl: String,
+        body: String?,
+        isFromBookInfo: Boolean = false
+    ): Flow<PartialChapterList> = flow {
+        body ?: throw NoStackTraceException(
+            appCtx.getString(R.string.error_get_web_content, baseUrl)
+        )
+        val chapterList = ArrayList<BookChapter>()
+        Debug.log(bookSource.bookSourceUrl, "≡获取成功:${baseUrl}")
+        Debug.log(bookSource.bookSourceUrl, body, state = 30)
+        val tocRule = bookSource.getTocRule()
+        val nextUrlList = arrayListOf(redirectUrl)
+        var reverse = false
+        var listRule = tocRule.chapterList ?: ""
+        if (listRule.startsWith("-")) {
+            reverse = true
+            listRule = listRule.substring(1)
+        }
+        if (listRule.startsWith("+")) {
+            listRule = listRule.substring(1)
+        }
+        var chapterData = analyzeChapterList(
+            book, baseUrl, redirectUrl, body,
+            tocRule, listRule, bookSource, log = true,
+            isFromBookInfo = isFromBookInfo
+        )
+        chapterList.addAll(chapterData.first)
+        // 第一页解析完成后立即排序编号并发射，让调用方可以尽早展示目录
+        val sortedFirstPage = sortAndIndex(chapterList, reverse, book)
+        emit(PartialChapterList(sortedFirstPage, isComplete = false))
+
+        when (chapterData.second.size) {
+            0 -> {
+                // 单页目录，直接发射最终结果
+                val finalList = finalizeChapterList(sortedFirstPage, tocRule, book)
+                emit(PartialChapterList(finalList, isComplete = true))
+            }
+            1 -> {
+                // 串行多页目录，每加载完一页就发射一次
+                var nextUrl = chapterData.second[0]
+                while (nextUrl.isNotEmpty() && !nextUrlList.contains(nextUrl)) {
+                    nextUrlList.add(nextUrl)
+                    val analyzeUrl = AnalyzeUrl(
+                        mUrl = nextUrl,
+                        source = bookSource,
+                        ruleData = book,
+                        coroutineContext = currentCoroutineContext()
+                    )
+                    val res = analyzeUrl.getStrResponseAwait()
+                    res.body?.let { nextBody ->
+                        chapterData = analyzeChapterList(
+                            book, nextUrl, nextUrl,
+                            nextBody, tocRule, listRule, bookSource,
+                            isFromBookInfo = isFromBookInfo
+                        )
+                        nextUrl = chapterData.second.firstOrNull() ?: ""
+                        chapterList.addAll(chapterData.first)
+                        val sorted = sortAndIndex(chapterList, reverse, book)
+                        val isLast = nextUrl.isEmpty() || nextUrlList.contains(nextUrl)
+                        if (isLast) {
+                            // 最后一页，执行格式化JS等最终处理并发射完成结果
+                            val finalList = finalizeChapterList(sorted, tocRule, book)
+                            emit(PartialChapterList(finalList, isComplete = true))
+                        } else {
+                            // 中间页，发射中间结果供调用方增量展示
+                            emit(PartialChapterList(sorted, isComplete = false))
+                        }
+                    } ?: run {
+                        nextUrl = ""
+                    }
+                }
+                Debug.log(bookSource.bookSourceUrl, "◇目录总页数:${nextUrlList.size}")
+            }
+            else -> {
+                // 并发多页目录，无法逐页发射，全部加载完后发射最终结果
+                Debug.log(
+                    bookSource.bookSourceUrl,
+                    "◇并发解析目录,总页数:${chapterData.second.size}"
+                )
+                flow {
+                    for (urlStr in chapterData.second) {
+                        emit(urlStr)
+                    }
+                }.mapAsync(AppConfig.threadCount) { urlStr ->
+                    val analyzeUrl = AnalyzeUrl(
+                        mUrl = urlStr,
+                        source = bookSource,
+                        ruleData = book,
+                        coroutineContext = currentCoroutineContext()
+                    )
+                    val res = analyzeUrl.getStrResponseAwait()
+                    analyzeChapterList(
+                        book, urlStr, res.url,
+                        res.body!!, tocRule, listRule, bookSource, false,
+                        isFromBookInfo = isFromBookInfo
+                    ).first
+                }.collect {
+                    chapterList.addAll(it)
+                }
+                val sorted = sortAndIndex(chapterList, reverse, book)
+                val finalList = finalizeChapterList(sorted, tocRule, book)
+                emit(PartialChapterList(finalList, isComplete = true))
+            }
+        }
+    }
+
+    /**
+     * 对已加载的章节进行去重、排序和编号
+     *
+     * 在渐进加载的中间过程中调用，确保每次发射的章节列表顺序正确且 index 已设置。
+     * 注意：此方法不做格式化JS和book信息更新，这些仅在最终完成时处理。
+     *
+     * @param chapterList 已加载的所有章节（可能来自多页）
+     * @param reverse 是否反转（由 listRule 的 "-" 前缀决定）
+     * @param book 书籍对象
+     * @return 排序编号后的章节列表
+     */
+    private fun sortAndIndex(
+        chapterList: ArrayList<BookChapter>,
+        reverse: Boolean,
+        book: Book
+    ): ArrayList<BookChapter> {
+        if (chapterList.isEmpty()) return chapterList
+        val list = ArrayList(chapterList)
+        if (!reverse) {
+            list.reverse()
+        }
+        val lh = LinkedHashSet(list)
+        val result = ArrayList(lh)
+        if (!book.getReverseToc()) {
+            result.reverse()
+        }
+        result.forEachIndexed { index, bookChapter ->
+            bookChapter.index = index
+        }
+        return result
+    }
+
+    /**
+     * 完成目录加载的最终处理
+     *
+     * 在目录全部加载完成后调用，执行：
+     * - 格式化JS处理章节标题
+     * - 更新书籍的当前阅读标题、最新章节标题
+     * - 更新章节检查计数和时间
+     * - 合并历史章节信息（字数、变量、图片URL）
+     *
+     * @param list 已排序编号的完整章节列表
+     * @param tocRule 目录规则
+     * @param book 书籍对象
+     * @return 处理后的章节列表
+     */
+    private fun finalizeChapterList(
+        list: ArrayList<BookChapter>,
+        tocRule: TocRule,
+        book: Book
+    ): ArrayList<BookChapter> {
+        if (list.isEmpty()) return list
+        val formatJs = tocRule.formatJs
+        if (!formatJs.isNullOrBlank()) {
+            Context.enter().use {
+                val bindings = ScriptBindings()
+                bindings["gInt"] = 0
+                list.forEachIndexed { index, bookChapter ->
+                    bindings["index"] = index + 1
+                    bindings["chapter"] = bookChapter
+                    bindings["title"] = bookChapter.title
+                    RhinoScriptEngine.runCatching {
+                        eval(formatJs, bindings)?.toString()?.let {
+                            bookChapter.title = it
+                        }
+                    }.onFailure {
+                        Debug.log(book.origin, "格式化标题出错, ${it.localizedMessage}")
+                    }
+                }
+            }
+        }
+        val replaceRules = ContentProcessor.get(book).getTitleReplaceRules()
+        val replaceBook = book.toReplaceBook()
+        book.durChapterTitle = list.getOrElse(book.durChapterIndex) { list.last() }
+            .getDisplayTitle(
+                replaceRules,
+                book.getUseReplaceRule(),
+                replaceBook = replaceBook
+            )
+        if (book.totalChapterNum < list.size) {
+            book.lastCheckCount = list.size - book.totalChapterNum
+            book.latestChapterTime = System.currentTimeMillis()
+        }
+        book.lastCheckTime = System.currentTimeMillis()
+        book.totalChapterNum = list.size
+        book.latestChapterTitle =
+            list.getOrElse(book.simulatedTotalChapterNum() - 1) { list.last() }
+                .getDisplayTitle(
+                    replaceRules,
+                    book.getUseReplaceRule(),
+                    replaceBook = replaceBook
+                )
         upChapterInfo(list, book)
         return list
     }

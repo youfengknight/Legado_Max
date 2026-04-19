@@ -21,6 +21,11 @@ import org.eclipse.tm4e.core.registry.IThemeSource
 import org.jsoup.Jsoup
 import splitties.init.appCtx
 
+/**
+ * 代码编辑视图模型
+ * 管理代码编辑器的语言、主题、格式化等功能
+ * 支持 TextMate 语法高亮和代码格式化
+ */
 class CodeEditViewModel(application: Application) : BaseViewModel(application) {
     private val themeFileNames = arrayOf(
         "d_monokai_dimmed",
@@ -41,6 +46,10 @@ class CodeEditViewModel(application: Application) : BaseViewModel(application) {
     var writable = true
     var title: String? = null
 
+    /**
+     * 初始化 Sora 编辑器
+     * 加载 TextMate 语法和主题配置
+     */
     fun initSora() {
         //初始化sora加载
         FileProviderRegistry.getInstance().addFileProvider(
@@ -49,6 +58,12 @@ class CodeEditViewModel(application: Application) : BaseViewModel(application) {
         GrammarRegistry.getInstance().loadGrammars("textmate/languages.json")
     }
 
+    /**
+     * 初始化数据
+     * 从 Intent 或缓存中加载文本内容，设置语言类型
+     * @param intent 包含初始化数据的 Intent
+     * @param success 初始化成功回调
+     */
     fun initData(
         intent: Intent, success: () -> Unit
     ) {
@@ -77,12 +92,21 @@ class CodeEditViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 判断文本是否为 HTML 格式
+     * @param text 待检测文本
+     * @return 是否为 HTML 格式
+     */
     private fun isHtmlStr(text: String): Boolean {
         val trimmedText = text.trim()
         val htmlRegex = Regex("""^(?:\[[\s\d.]])?<(?:html|!DOCTYPE)""", RegexOption.IGNORE_CASE)
         return htmlRegex.containsMatchIn(trimmedText) && trimmedText.endsWith(">")
     }
 
+    /**
+     * 加载 TextMate 主题
+     * @param index 主题索引
+     */
     fun loadTextMateThemes(index: Int) {
         val theme = themeFileNames.getOrElse(index) { "d_monokai" }
         val themeModel = themeRegistry.findThemeByFileName(theme)
@@ -101,6 +125,12 @@ class CodeEditViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 格式化代码
+     * 支持 JavaScript、HTML 等语言的格式化
+     * 使用 js-beautify 库进行格式化
+     * @param editor 代码编辑器实例
+     */
     fun formatCode(editor: CodeEditor) {
         execute {
             val text = editor.text.toString()
@@ -162,6 +192,12 @@ class CodeEditViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    /**
+     * 使用 WebView 格式化 JavaScript 代码
+     * 通过 js-beautify 库进行格式化
+     * @param jsCode JavaScript 代码
+     * @return 格式化后的代码
+     */
     private suspend fun webFormatCode(jsCode: String): String? {
         CacheManager.putMemory("web_format_code", jsCode)
         return BackstageWebView(
@@ -189,6 +225,12 @@ class CodeEditViewModel(application: Application) : BaseViewModel(application) {
         ).getStrResponse().body
     }
 
+    /**
+     * 格式化 HTML 代码
+     * 使用 Jsoup 库进行格式化
+     * @param html HTML 代码
+     * @return 格式化后的 HTML
+     */
     private fun formatCodeHtml(html: String): String? {
         val doc = Jsoup.parse(html)
         doc.outputSettings()

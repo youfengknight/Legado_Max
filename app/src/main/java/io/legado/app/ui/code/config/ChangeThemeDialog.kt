@@ -17,7 +17,11 @@ import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
-
+/**
+ * 更改主题对话框
+ * 用于选择代码编辑器的配色主题
+ * 支持深色/浅色主题自动切换
+ */
 class ChangeThemeDialog() : BaseDialogFragment(R.layout.dialog_edit_change_theme) {
     private val binding by viewBinding(DialogEditChangeThemeBinding::bind)
     private var callBack: CallBack? = null
@@ -39,11 +43,19 @@ class ChangeThemeDialog() : BaseDialogFragment(R.layout.dialog_edit_change_theme
         setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 
+    /**
+     * 片段创建时初始化
+     * 加载当前主题设置
+     */
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         initData()
         initView()
     }
 
+    /**
+     * 初始化数据
+     * 加载当前主题索引和自动切换设置
+     */
     private fun initData() {
         binding.run {
             themeIndex = if (isDark) {
@@ -61,6 +73,10 @@ class ChangeThemeDialog() : BaseDialogFragment(R.layout.dialog_edit_change_theme
         }
     }
 
+    /**
+     * 初始化视图
+     * 设置主题选择和自动切换的监听器
+     */
     private fun initView() {
         binding.run {
             chThemeL.setOnCheckedChangeListener { _, checkedId ->
@@ -99,6 +115,10 @@ class ChangeThemeDialog() : BaseDialogFragment(R.layout.dialog_edit_change_theme
         }
     }
 
+    /**
+     * 回调接口
+     * 用于通知主题更改
+     */
     interface CallBack {
         fun upTheme(index: Int)
     }
