@@ -670,6 +670,7 @@
     <string name="share_layout">Shared layout</string>
     <string name="browser">Browser</string>
     <string name="import_default_rule">Import default rules</string>
+    <string name="group_by_domain">Group by domain</string>
     <string name="name">Name</string>
     <string name="regex">Regex</string>
     <string name="example">Example</string>

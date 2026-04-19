@@ -17,6 +17,9 @@ import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.ui.widget.recycler.DragSelectTouchHelper
 import io.legado.app.ui.widget.recycler.ItemTouchCallback
 import io.legado.app.utils.ColorUtils
+import io.legado.app.utils.buildMainHandler
+import io.legado.app.utils.gone
+import io.legado.app.utils.visible
 import java.util.Collections
 
 
@@ -25,6 +28,13 @@ class RssSourceAdapter(context: Context, val callBack: CallBack) :
     ItemTouchCallback.Callback {
 
     private val selected = linkedSetOf<RssSource>()
+    private val handler = buildMainHandler()
+    
+    /**
+     * 是否显示域名分组标题
+     * 开启按域名分组时显示域名标题
+     */
+    var showSourceHost = false
 
     val selection: List<RssSource>
         get() {
@@ -78,6 +88,7 @@ class RssSourceAdapter(context: Context, val callBack: CallBack) :
                 cbSource.text = item.getDisplayNameGroup()
                 swtEnabled.isChecked = item.enabled
                 cbSource.isChecked = selected.contains(item)
+                upSourceHost(binding, holder.layoutPosition)
             } else {
                 for (i in payloads.indices) {
                     val bundle = payloads[i] as Bundle
@@ -86,6 +97,7 @@ class RssSourceAdapter(context: Context, val callBack: CallBack) :
                             "upName" -> cbSource.text = item.getDisplayNameGroup()
                             "enabled" -> swtEnabled.isChecked = bundle.getBoolean("enabled")
                             "selected" -> cbSource.isChecked = selected.contains(item)
+                            "upSourceHost" -> upSourceHost(binding, holder.layoutPosition)
                         }
                     }
                 }
@@ -124,6 +136,10 @@ class RssSourceAdapter(context: Context, val callBack: CallBack) :
 
     override fun onCurrentListChanged() {
         callBack.upCountView()
+        // 数据变化后刷新域名标题显示
+        handler.post {
+            notifyItemRangeChanged(0, itemCount, bundleOf("upSourceHost" to null))
+        }
     }
 
     fun selectAll() {
@@ -181,6 +197,38 @@ class RssSourceAdapter(context: Context, val callBack: CallBack) :
             true
         }
         popupMenu.show()
+    }
+
+    /**
+     * 根据是否开启域名分组显示域名标题
+     * 只有分组开启且当前项是该分组的第一个item时才显示
+     */
+    private fun upSourceHost(binding: ItemRssSourceBinding, position: Int) = binding.run {
+        if (showSourceHost && isItemHeader(position)) {
+            tvHostText.text = getHeaderText(position)
+            tvHostText.visible()
+        } else {
+            tvHostText.gone()
+        }
+    }
+
+    /**
+     * 获取指定位置的订阅源域名
+     */
+    fun getHeaderText(position: Int): String {
+        val source = getItem(position)!!
+        return callBack.getSourceHost(source.sourceUrl)
+    }
+
+    /**
+     * 判断当前item是否需要显示域名标题
+     * 第一个item或与前一个item的域名不同时显示标题
+     */
+    fun isItemHeader(position: Int): Boolean {
+        if (position == 0) return true
+        val lastHost = getHeaderText(position - 1)
+        val curHost = getHeaderText(position)
+        return lastHost != curHost
     }
 
     override fun swap(srcPosition: Int, targetPosition: Int): Boolean {
@@ -243,5 +291,11 @@ class RssSourceAdapter(context: Context, val callBack: CallBack) :
         fun toBottom(source: RssSource)
         fun upOrder()
         fun upCountView()
+        
+        /**
+         * 获取域名（提取订阅源URL的域名部分）
+         * 用于按域名分组功能
+         */
+        fun getSourceHost(origin: String): String
     }
 }

@@ -652,6 +652,7 @@
     <string name="share_layout">共用佈局</string>
     <string name="browser">瀏覽器</string>
     <string name="import_default_rule">導入默認規則</string>
+    <string name="group_by_domain">按域名分組</string>
     <string name="name">名稱</string>
     <string name="regex">正則</string>
     <string name="more_menu">更多菜單</string>

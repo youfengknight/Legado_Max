@@ -24,6 +24,10 @@ object ReadAloud {
     val ttsEngine get() = ReadBook.book?.getTtsEngine() ?: AppConfig.ttsEngine
     var httpTTS: HttpTTS? = null
 
+    /**
+     * 获取朗读服务类
+     * @return 服务类
+     */
     private fun getReadAloudClass(): Class<*> {
         val ttsEngine = ttsEngine
         if (ttsEngine.isNullOrBlank()) {
@@ -38,11 +42,21 @@ object ReadAloud {
         return TTSReadAloudService::class.java
     }
 
+    /**
+     * 更新朗读服务类
+     */
     fun upReadAloudClass() {
         stop(appCtx)
         aloudClass = getReadAloudClass()
     }
 
+    /**
+     * 播放朗读
+     * @param context 上下文
+     * @param play 是否播放
+     * @param pageIndex 页面索引
+     * @param startPos 起始位置
+     */
     fun play(
         context: Context,
         play: Boolean = true,
@@ -64,6 +78,12 @@ object ReadAloud {
         }
     }
 
+    /**
+     * 通过EventBus播放朗读
+     * @param play 是否播放
+     * @param pageIndex 页面索引
+     * @param startPos 起始位置
+     */
     fun playByEventBus(
         play: Boolean = true,
         pageIndex: Int = ReadBook.durPageIndex,
@@ -77,6 +97,10 @@ object ReadAloud {
         postEvent(EventBus.READ_ALOUD_PLAY, bundle)
     }
 
+    /**
+     * 暂停朗读
+     * @param context 上下文
+     */
     fun pause(context: Context) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
@@ -85,6 +109,10 @@ object ReadAloud {
         }
     }
 
+    /**
+     * 恢复朗读
+     * @param context 上下文
+     */
     fun resume(context: Context) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
@@ -93,6 +121,10 @@ object ReadAloud {
         }
     }
 
+    /**
+     * 停止朗读
+     * @param context 上下文
+     */
     fun stop(context: Context) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
@@ -101,6 +133,10 @@ object ReadAloud {
         }
     }
 
+    /**
+     * 上一段
+     * @param context 上下文
+     */
     fun prevParagraph(context: Context) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
@@ -109,6 +145,10 @@ object ReadAloud {
         }
     }
 
+    /**
+     * 下一段
+     * @param context 上下文
+     */
     fun nextParagraph(context: Context) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
@@ -117,6 +157,10 @@ object ReadAloud {
         }
     }
 
+    /**
+     * 更新TTS语速
+     * @param context 上下文
+     */
     fun upTtsSpeechRate(context: Context) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)
@@ -125,6 +169,11 @@ object ReadAloud {
         }
     }
 
+    /**
+     * 设置定时器
+     * @param context 上下文
+     * @param minute 分钟数
+     */
     fun setTimer(context: Context, minute: Int) {
         if (BaseReadAloudService.isRun) {
             val intent = Intent(context, aloudClass)

@@ -80,19 +80,39 @@ object ImageProvider {
 
     }
 
+    /**
+     * 存储位图到缓存
+     * @param key 键
+     * @param bitmap 位图
+     */
     fun put(key: String, bitmap: Bitmap) {
         ensureLruCacheSize(bitmap)
         bitmapLruCache.put(key, bitmap)
     }
 
+    /**
+     * 从缓存获取位图
+     * @param key 键
+     * @return 位图
+     */
     fun get(key: String): Bitmap? {
         return bitmapLruCache[key]
     }
 
+    /**
+     * 从缓存移除位图
+     * @param key 键
+     * @return 被移除的位图
+     */
     fun remove(key: String): Bitmap? {
         return bitmapLruCache.remove(key)
     }
 
+    /**
+     * 获取未回收的位图
+     * @param key 键
+     * @return 位图
+     */
     private fun getNotRecycled(key: String): Bitmap? {
         val bitmap = bitmapLruCache[key] ?: return null
         if (bitmap.isRecycled) {
@@ -102,6 +122,10 @@ object ImageProvider {
         return bitmap
     }
 
+    /**
+     * 确保LRU缓存大小
+     * @param bitmap 位图
+     */
     private fun ensureLruCacheSize(bitmap: Bitmap) {
         val lruMaxSize = bitmapLruCache.maxSize()
         val lruSize = bitmapLruCache.size()
@@ -205,6 +229,9 @@ object ImageProvider {
         }.getOrDefault(errorBitmap)
     }
 
+    /**
+     * 清除缓存
+     */
     fun clear() {
         bitmapLruCache.evictAll()
     }

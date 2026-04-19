@@ -59,6 +59,9 @@ object BookCover {
         upDefaultCover()
     }
 
+    /**
+     * 更新默认封面
+     */
     @SuppressLint("UseCompatLoadingForDrawables")
     fun upDefaultCover() {
         var path: String?
@@ -154,6 +157,14 @@ object BookCover {
             }
     }
 
+    /**
+     * 预加载漫画图片
+     * @param context 上下文
+     * @param path 图片路径
+     * @param loadOnlyWifi 是否仅在WiFi下加载
+     * @param sourceOrigin 源来源
+     * @return 请求构建器
+     */
     fun preloadManga(
         context: Context,
         path: String?,
@@ -196,15 +207,28 @@ object BookCover {
             .thumbnail(loadBlur)
     }
 
+    /**
+     * 获取封面规则
+     * @return 封面规则
+     */
     fun getCoverRule(): CoverRule {
         return getConfig() ?: DefaultData.coverRule
     }
 
+    /**
+     * 获取配置
+     * @return 封面规则配置
+     */
     fun getConfig(): CoverRule? {
         return GSON.fromJsonObject<CoverRule>(CacheManager.get(coverRuleConfigKey))
             .getOrNull()
     }
 
+    /**
+     * 搜索封面
+     * @param book 书籍
+     * @return 封面URL
+     */
     suspend fun searchCover(book: Book): String? {
         val config = getCoverRule()
         if (!config.enable || config.searchUrl.isBlank() || config.coverRule.isBlank()) {
@@ -225,15 +249,26 @@ object BookCover {
         return analyzeRule.getString(config.coverRule, isUrl = true)
     }
 
+    /**
+     * 保存封面规则
+     * @param config 封面规则配置
+     */
     fun saveCoverRule(config: CoverRule) {
         val json = GSON.toJson(config)
         saveCoverRule(json)
     }
 
+    /**
+     * 保存封面规则
+     * @param json JSON字符串
+     */
     fun saveCoverRule(json: String) {
         CacheManager.put(coverRuleConfigKey, json)
     }
 
+    /**
+     * 删除封面规则
+     */
     fun delCoverRule() {
         CacheManager.delete(coverRuleConfigKey)
     }

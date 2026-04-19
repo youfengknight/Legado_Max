@@ -30,6 +30,7 @@ import io.legado.app.ui.widget.recycler.DragSelectTouchHelper
 import io.legado.app.ui.widget.recycler.ItemTouchCallback
 import io.legado.app.ui.widget.recycler.VerticalDivider
 import io.legado.app.utils.ACache
+import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.isAbsUrl
@@ -69,6 +70,17 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
     private var sourceFlowJob: Job? = null
     private var groups = arrayListOf<String>()
     private var groupMenu: SubMenu? = null
+    
+    /**
+     * 是否按域名分组显示订阅源
+     */
+    private var groupSourcesByDomain = false
+    
+    /**
+     * 域名缓存，避免重复提取
+     */
+    private val hostMap = hashMapOf<String, String>()
+    private val itemTouchCallback by lazy { ItemTouchCallback(adapter) }
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         showDialogFragment(ImportRssSourceDialog(it))
@@ -127,6 +139,19 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
             R.id.menu_import_qr -> qrCodeResult.launch()
             R.id.menu_group_manage -> showDialogFragment<GroupManageDialog>()
             R.id.menu_import_default -> viewModel.importDefault()
+            
+            /**
+             * 按域名分组菜单项
+             * 开启后订阅源按域名分组排序，关闭后恢复默认排序
+             */
+            R.id.menu_group_sources_by_domain -> {
+                item.isChecked = !item.isChecked
+                groupSourcesByDomain = item.isChecked
+                adapter.showSourceHost = item.isChecked
+                // 按域名分组时禁用手动拖拽排序
+                itemTouchCallback.isCanDrag = !item.isChecked
+                upSourceFlow(searchView.query?.toString())
+            }
             R.id.menu_enabled_group -> {
                 searchView.setQuery(getString(R.string.enabled), true)
             }
@@ -298,6 +323,10 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
         }
     }
 
+    /**
+     * 根据搜索条件更新订阅源列表
+     * 当开启按域名分组时，会按域名进行排序
+     */
     private fun upSourceFlow(searchKey: String? = null) {
         sourceFlowJob?.cancel()
         sourceFlowJob = lifecycleScope.launch {
@@ -330,6 +359,17 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
                 else -> {
                     appDb.rssSourceDao.flowSearch(searchKey)
                 }
+            }.map { data ->
+                hostMap.clear()
+                // 按域名分组排序逻辑
+                if (groupSourcesByDomain) {
+                    data.sortedWith(
+                        compareBy<RssSource> { getSourceHost(it.sourceUrl) == "#" }
+                            .thenBy { getSourceHost(it.sourceUrl) }
+                            .thenByDescending { it.lastUpdateTime })
+                } else {
+                    data
+                }
             }.catch {
                 AppLog.put("订阅源管理界面更新数据出错", it)
             }.flowOn(IO).conflate().collect {
@@ -354,6 +394,16 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
             adapter.selection.size,
             adapter.itemCount
         )
+    }
+
+    /**
+     * 提取URL的域名部分用于分组
+     * 使用hostMap缓存已提取的域名，避免重复解析
+     */
+    override fun getSourceHost(origin: String): String {
+        return hostMap.getOrPut(origin) {
+            NetworkUtils.getSubDomainOrNull(origin) ?: "#"
+        }
     }
 
     @SuppressLint("InflateParams")

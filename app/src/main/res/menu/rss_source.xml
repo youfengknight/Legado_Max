@@ -71,6 +71,12 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_group_sources_by_domain"
+        android:checkable="true"
+        android:title="@string/group_by_domain"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_help"
         android:icon="@drawable/ic_help"
         android:title="@string/help"

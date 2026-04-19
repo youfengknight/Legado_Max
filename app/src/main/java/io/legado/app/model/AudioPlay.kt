@@ -77,12 +77,19 @@ object AudioPlay : CoroutineScope by MainScope() {
     var readStartTime: Long = System.currentTimeMillis()
     val executor = globalExecutor
 
+    /**
+     * 切换播放模式
+     */
     fun changePlayMode() {
         playMode = playMode.next()
         book?.setPlayMode(playMode.ordinal)
         postEvent(EventBus.PLAY_MODE_CHANGED, playMode)
     }
 
+    /**
+     * 更新数据
+     * @param book 书籍
+     */
     fun upData(book: Book) {
         AudioPlay.book = book
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
@@ -102,6 +109,10 @@ object AudioPlay : CoroutineScope by MainScope() {
         upDurChapter()
     }
 
+    /**
+     * 重置数据
+     * @param book 书籍
+     */
     fun resetData(book: Book) {
         stop()
         AudioPlay.book = book
@@ -132,6 +143,9 @@ object AudioPlay : CoroutineScope by MainScope() {
         postEvent(EventBus.AUDIO_BUFFER_PROGRESS, 0)
     }
 
+    /**
+     * 更新阅读时间
+     */
     fun upReadTime() {
         if (!AppConfig.enableReadRecord) {
             return
@@ -147,6 +161,11 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 添加加载中的章节
+     * @param index 章节索引
+     * @return 是否添加成功
+     */
     private fun addLoading(index: Int): Boolean {
         synchronized(this) {
             if (loadingChapters.contains(index)) return false
@@ -155,12 +174,19 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 移除加载中的章节
+     * @param index 章节索引
+     */
     private fun removeLoading(index: Int) {
         synchronized(this) {
             loadingChapters.remove(index)
         }
     }
 
+    /**
+     * 加载或更新播放URL
+     */
     fun loadOrUpPlayUrl() {
         if (durPlayUrl.isEmpty()) {
             loadPlayUrl()
@@ -225,6 +251,9 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 更新播放URL
+     */
     private fun upPlayUrl() {
         if (isPlayToEnd()) {
             playNew()
@@ -264,6 +293,10 @@ object AudioPlay : CoroutineScope by MainScope() {
         postEvent(EventBus.AUDIO_PROGRESS, durChapterPos)
     }
 
+    /**
+     * 暂停播放
+     * @param context 上下文
+     */
     fun pause(context: Context) {
         if (AudioPlayService.isRun) {
             readStartTime = System.currentTimeMillis()
@@ -273,6 +306,10 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 恢复播放
+     * @param context 上下文
+     */
     fun resume(context: Context) {
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
@@ -281,6 +318,9 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 停止播放
+     */
     fun stop() {
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
@@ -289,6 +329,10 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 设置播放速度
+     * @param speed 播放速度
+     */
     fun setSpeed(speed: Float) {
         if (AudioPlayService.isRun) {
             book?.setPlaySpeed(speed)
@@ -300,8 +344,10 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
-     
-
+    /**
+     * 调整播放进度
+     * @param position 播放位置
+     */
     fun adjustProgress(position: Int) {
         durChapterPos = position
         saveRead()
@@ -313,6 +359,10 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 跳转到指定章节
+     * @param index 章节索引
+     */
     fun skipTo(index: Int) {
         Coroutine.async {
             stopPlay()
@@ -327,6 +377,9 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 播放上一章
+     */
     fun prev() {
         Coroutine.async {
             stopPlay()
@@ -341,6 +394,9 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 播放下一章
+     */
     fun next() {
         stopPlay()
         upReadTime()
@@ -384,6 +440,10 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 设置定时器
+     * @param minute 分钟数
+     */
     fun setTimer(minute: Int) {
         if (AudioPlayService.isRun) {
             val intent = Intent(context, AudioPlayService::class.java)
@@ -396,12 +456,18 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 增加定时器时间
+     */
     fun addTimer() {
         val intent = Intent(context, AudioPlayService::class.java)
         intent.action = IntentAction.addTimer
         context.startService(intent)
     }
 
+    /**
+     * 停止播放
+     */
     fun stopPlay() {
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
@@ -410,6 +476,10 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 保存阅读进度
+     * @param first 是否首次保存
+     */
     fun saveRead(first: Boolean = false) {
         val book = book ?: return
         Coroutine.async {
@@ -445,25 +515,45 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 播放位置变化
+     * @param position 播放位置
+     */
     fun playPositionChanged(position: Int) {
         durChapterPos = position
         saveRead()
     }
 
+    /**
+     * 更新加载状态
+     * @param loading 是否正在加载
+     */
     fun upLoading(loading: Boolean) {
         callback?.upLoading(loading)
     }
 
+    /**
+     * 判断是否播放到结尾
+     * @return 是否播放到结尾
+     */
     private fun isPlayToEnd(): Boolean {
         return durChapterIndex + 1 == simulatedChapterSize
                 && durChapterPos == durAudioSize
     }
 
+    /**
+     * 注册回调
+     * @param context 上下文
+     */
     fun register(context: Context) {
         activityContext = context
         callback = context as CallBack
     }
 
+    /**
+     * 取消注册回调
+     * @param context 上下文
+     */
     fun unregister(context: Context) {
         if (activityContext === context) {
             activityContext = null
@@ -472,10 +562,17 @@ object AudioPlay : CoroutineScope by MainScope() {
         coroutineContext.cancelChildren()
     }
 
+    /**
+     * 注册服务回调
+     * @param context 上下文
+     */
     fun registerService(context: Context) {
         serviceContext = context
     }
 
+    /**
+     * 取消注册服务回调
+     */
     fun unregisterService() {
         serviceContext = null
     }

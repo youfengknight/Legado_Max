@@ -95,6 +95,10 @@ object ReadBook : CoroutineScope by MainScope() {
     val preDownloadSemaphore = Semaphore(2)
     val executor = globalExecutor
 
+    /**
+     * 重置数据
+     * @param book 书籍
+     */
     fun resetData(book: Book) {
         releaseAndCancel()
         ReadBook.book = book
@@ -127,6 +131,10 @@ object ReadBook : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 更新数据
+     * @param book 书籍
+     */
     fun upData(book: Book) {
         releaseAndCancel()
         ReadBook.book = book
@@ -159,6 +167,10 @@ object ReadBook : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 更新网络书籍
+     * @param book 书籍
+     */
     fun upWebBook(book: Book) {
         if (book.isLocal) {
             bookSource = null
@@ -184,6 +196,10 @@ object ReadBook : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 更新阅读配置
+     * @param book 书籍
+     */
     fun upReadBookConfig(book: Book) {
         val oldIndex = ReadBookConfig.styleSelect
         ReadBookConfig.isComic = book.isImage
@@ -195,6 +211,10 @@ object ReadBook : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 设置进度
+     * @param progress 书籍进度
+     */
     fun setProgress(progress: BookProgress) {
         if (progress.durChapterIndex < chapterSize &&
             (durChapterIndex != progress.durChapterIndex
@@ -209,13 +229,17 @@ object ReadBook : CoroutineScope by MainScope() {
         }
     }
 
-    //暂时保存跳转前进度
+    /**
+     * 暂时保存跳转前进度
+     */
     fun saveCurrentBookProgress() {
         if (lastBookProgress != null) return //避免进度条连续跳转不能覆盖最初的进度记录
         lastBookProgress = book?.let { BookProgress(it) }
     }
 
-    //恢复跳转前进度
+    /**
+     * 恢复跳转前进度
+     */
     fun restoreLastBookProgress() {
         lastBookProgress?.let {
             setProgress(it)
@@ -223,6 +247,9 @@ object ReadBook : CoroutineScope by MainScope() {
         }
     }
 
+    /**
+     * 清除文本章节
+     */
     fun clearTextChapter() {
         clearExpiredChapterLoadingJob(true)
         prevTextChapter = null
@@ -230,12 +257,20 @@ object ReadBook : CoroutineScope by MainScope() {
         nextTextChapter = null
     }
 
+    /**
+     * 清除搜索结果
+     */
     fun clearSearchResult() {
         curTextChapter?.clearSearchResult()
         prevTextChapter?.clearSearchResult()
         nextTextChapter?.clearSearchResult()
     }
 
+    /**
+     * 上传进度
+     * @param toast 是否显示提示
+     * @param successAction 成功回调
+     */
     fun uploadProgress(toast: Boolean = false, successAction: (() -> Unit)? = null) {
         book?.let {
             launch(IO) {

@@ -46,6 +46,11 @@ object CacheBook {
     private val workingState = MutableStateFlow(true)
     private val mutex = Mutex()
 
+    /**
+     * 根据书籍URL获取或创建缓存模型
+     * @param bookUrl 书籍URL
+     * @return 缓存书籍模型，如果书籍或书源不存在则返回null
+     */
     @Synchronized
     fun getOrCreate(bookUrl: String): CacheBookModel? {
         val book = appDb.bookDao.getBook(bookUrl) ?: return null
@@ -63,6 +68,12 @@ object CacheBook {
         return cacheBook
     }
 
+    /**
+     * 根据书源和书籍获取或创建缓存模型
+     * @param bookSource 书源
+     * @param book 书籍
+     * @return 缓存书籍模型
+     */
     @Synchronized
     fun getOrCreate(bookSource: BookSource, book: Book): CacheBookModel {
         updateBookSource(bookSource)
@@ -78,6 +89,10 @@ object CacheBook {
         return cacheBook
     }
 
+    /**
+     * 更新书源
+     * @param newBookSource 新的书源
+     */
     private fun updateBookSource(newBookSource: BookSource) {
         cacheBookMap.forEach {
             val model = it.value
@@ -87,6 +102,13 @@ object CacheBook {
         }
     }
 
+    /**
+     * 启动缓存书籍服务
+     * @param context 上下文
+     * @param book 书籍
+     * @param start 起始章节索引
+     * @param end 结束章节索引
+     */
     fun start(context: Context, book: Book, start: Int, end: Int) {
         if (!book.isLocal) {
             context.startService<CacheBookService> {
@@ -98,6 +120,11 @@ object CacheBook {
         }
     }
 
+    /**
+     * 移除缓存书籍
+     * @param context 上下文
+     * @param bookUrl 书籍URL
+     */
     fun remove(context: Context, bookUrl: String) {
         context.startService<CacheBookService> {
             action = IntentAction.remove
@@ -105,6 +132,10 @@ object CacheBook {
         }
     }
 
+    /**
+     * 停止缓存书籍服务
+     * @param context 上下文
+     */
     fun stop(context: Context) {
         if (CacheBookService.isRun) {
             context.startService<CacheBookService> {
@@ -113,6 +144,9 @@ object CacheBook {
         }
     }
 
+    /**
+     * 关闭所有缓存任务并清理资源
+     */
     fun close() {
         cacheBookMap.forEach { it.value.stop() }
         cacheBookMap.clear()
@@ -120,10 +154,18 @@ object CacheBook {
         errorDownloadMap.clear()
     }
 
+    /**
+     * 设置工作状态
+     * @param value 工作状态值
+     */
     fun setWorkingState(value: Boolean) {
         workingState.value = value
     }
 
+    /**
+     * 启动处理任务
+     * @param context 协程上下文
+     */
     suspend fun startProcessJob(context: CoroutineContext) = mutex.withLock {
         setWorkingState(true)
         flow {
@@ -206,26 +248,44 @@ object CacheBook {
             postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
         }
 
+        /**
+         * 判断是否正在运行
+         * @return 是否正在运行
+         */
         @Synchronized
         fun isRun(): Boolean {
             return waitDownloadSet.isNotEmpty() || onDownloadSet.isNotEmpty() || isLoading
         }
 
+        /**
+         * 判断是否已停止
+         * @return 是否已停止
+         */
         @Synchronized
         fun isStop(): Boolean {
             return isStopped || (!isRun() && !waitingRetry)
         }
 
+        /**
+         * 判断是否正在加载
+         * @return 是否正在加载
+         */
         @Synchronized
         fun isLoading(): Boolean {
             return isLoading
         }
 
+        /**
+         * 设置加载状态为true
+         */
         @Synchronized
         fun setLoading() {
             isLoading = true
         }
 
+        /**
+         * 停止下载任务
+         */
         @Synchronized
         fun stop() {
             waitDownloadSet.clear()
@@ -235,6 +295,11 @@ object CacheBook {
             postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
         }
 
+        /**
+         * 添加下载任务
+         * @param start 起始章节索引
+         * @param end 结束章节索引
+         */
         @Synchronized
         fun addDownload(start: Int, end: Int) {
             isStopped = false
@@ -248,6 +313,10 @@ object CacheBook {
             postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
         }
 
+        /**
+         * 下载成功回调
+         * @param chapter 书籍章节
+         */
         @Synchronized
         private fun onSuccess(chapter: BookChapter) {
             onDownloadSet.remove(chapter.index)
@@ -255,6 +324,11 @@ object CacheBook {
             errorDownloadMap.remove(chapter.primaryStr())
         }
 
+        /**
+         * 下载错误预处理
+         * @param chapter 书籍章节
+         * @param error 错误信息
+         */
         @Synchronized
         private fun onPreError(chapter: BookChapter, error: Throwable) {
             waitingRetry = true
@@ -265,6 +339,11 @@ object CacheBook {
             onDownloadSet.remove(chapter.index)
         }
 
+        /**
+         * 下载错误后处理
+         * @param chapter 书籍章节
+         * @param error 错误信息
+         */
         @Synchronized
         private fun onPostError(chapter: BookChapter, error: Throwable) {
             //重试3次
@@ -279,18 +358,30 @@ object CacheBook {
             waitingRetry = false
         }
 
+        /**
+         * 下载错误回调
+         * @param chapter 书籍章节
+         * @param error 错误信息
+         */
         @Synchronized
         private fun onError(chapter: BookChapter, error: Throwable) {
             onPreError(chapter, error)
             onPostError(chapter, error)
         }
 
+        /**
+         * 取消下载回调
+         * @param index 章节索引
+         */
         @Synchronized
         private fun onCancel(index: Int) {
             onDownloadSet.remove(index)
             if (!isStopped) waitDownloadSet.add(index)
         }
 
+        /**
+         * 最终处理回调
+         */
         @Synchronized
         private fun onFinally() {
             if (waitDownloadSet.isEmpty() && onDownloadSet.isEmpty()) {
@@ -378,6 +469,12 @@ object CacheBook {
             }.start()
         }
 
+        /**
+         * 下载章节内容
+         * @param scope 协程作用域
+         * @param chapter 书籍章节
+         * @return 章节内容
+         */
         suspend fun downloadAwait(chapter: BookChapter): String {
             synchronized(this) {
                 onDownloadSet.add(chapter.index)
@@ -402,6 +499,13 @@ object CacheBook {
             }
         }
 
+        /**
+         * 下载章节内容
+         * @param scope 协程作用域
+         * @param chapter 书籍章节
+         * @param semaphore 信号量
+         * @param resetPageOffset 是否重置页面偏移
+         */
         @Synchronized
         fun download(
             scope: CoroutineScope,
@@ -440,6 +544,13 @@ object CacheBook {
             }.start()
         }
 
+        /**
+         * 下载完成处理
+         * @param chapter 书籍章节
+         * @param content 章节内容
+         * @param resetPageOffset 是否重置页面偏移
+         * @param canceled 是否被取消
+         */
         private fun downloadFinish(
             chapter: BookChapter,
             content: String,

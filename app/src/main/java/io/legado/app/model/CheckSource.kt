@@ -24,6 +24,11 @@ object CheckSource {
     var checkContent = CacheManager.get("checkContent")?.toBoolean() ?: true
     val summary get() = upSummary()
 
+    /**
+     * 启动书源校验
+     * @param context 上下文
+     * @param sources 书源列表
+     */
     fun start(context: Context, sources: List<BookSourcePart>) {
         val selectedIds = sources.map {
             it.bookSourceUrl
@@ -34,18 +39,29 @@ object CheckSource {
         }
     }
 
+    /**
+     * 停止书源校验
+     * @param context 上下文
+     */
     fun stop(context: Context) {
         context.startService<CheckSourceService> {
             action = IntentAction.stop
         }
     }
 
+    /**
+     * 恢复书源校验
+     * @param context 上下文
+     */
     fun resume(context: Context) {
         context.startService<CheckSourceService> {
             action = IntentAction.resume
         }
     }
 
+    /**
+     * 保存配置
+     */
     fun putConfig() {
         CacheManager.put("checkSourceTimeout", timeout)
         CacheManager.put("wSourceComment", wSourceComment)
@@ -57,6 +73,10 @@ object CheckSource {
         CacheManager.put("checkContent", checkContent)
     }
 
+    /**
+     * 更新摘要信息
+     * @return 摘要字符串
+     */
     private fun upSummary(): String {
         var checkItem = ""
         if (checkDomain) checkItem = "$checkItem ${appCtx.getString(R.string.domain)}"
