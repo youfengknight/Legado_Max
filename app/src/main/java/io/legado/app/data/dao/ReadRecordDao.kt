@@ -38,6 +38,7 @@ interface ReadRecordDao {
     @Query("select readTime from readRecord where deviceId = :androidId and bookName = :bookName")
     fun getReadTime(androidId: String, bookName: String): Long?
 
+    /** 获取指定书籍的首次阅读时间 */
     @Query("select firstRead from readRecord where bookName = :bookName limit 1")
     fun getFirstRead(bookName: String): Long?
 

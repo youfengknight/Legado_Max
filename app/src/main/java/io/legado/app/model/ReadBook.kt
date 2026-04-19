@@ -98,9 +98,9 @@ object ReadBook : CoroutineScope by MainScope() {
     fun resetData(book: Book) {
         releaseAndCancel()
         ReadBook.book = book
-        readRecord.bookName = book.name
-        readRecord.readTime = appDb.readRecordDao.getReadTime(book.name) ?: 0
-        readRecord.firstRead = appDb.readRecordDao.getFirstRead(book.name) ?: 0
+        readRecord.bookName = book.name // 设置阅读记录的书名
+        readRecord.readTime = appDb.readRecordDao.getReadTime(book.name) ?: 0 // 获取累计阅读时间
+        readRecord.firstRead = appDb.readRecordDao.getFirstRead(book.name) ?: 0 // 获取首次阅读时间
         readStartTime = System.currentTimeMillis()
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
         simulatedChapterSize = if (book.readSimulating()) {
