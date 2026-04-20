@@ -372,7 +372,11 @@ object BookList {
             return
         }
         val json = bookSource.exploreKindsJson()
-        if (json.isEmpty()) {
+        if (
+            json.isEmpty()
+            || json.startsWith("<usehtml>")
+            || json.startsWith("<useweb>")
+        ) {
             return
         }
         val kinds = GSONStrict.fromJsonArray<ExploreKind>(json).getOrNull()

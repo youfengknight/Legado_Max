@@ -1,4 +1,4 @@
-package io.legado.app.data.entities.rule
+ package io.legado.app.data.entities.rule
 
 import android.os.Parcelable
 import com.google.gson.JsonDeserializer

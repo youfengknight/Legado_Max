@@ -38,6 +38,20 @@ suspend fun OkHttpClient.newCallResponse(
         if (response.isSuccessful) {
             return response
         }
+        // 处理307重定向
+        if (response.code == 307) {
+            response.header("Location")?.let {
+                val newRequestBuilder = Request.Builder()
+                    .url(it)
+                    .method(response.request.method, response.request.body)
+                    .headers(response.request.headers)
+                response.close()
+                response = newCall(newRequestBuilder.build()).await()
+                if (response.isSuccessful) {
+                    return response
+                }
+            }
+        }
     }
     return response!!
 }

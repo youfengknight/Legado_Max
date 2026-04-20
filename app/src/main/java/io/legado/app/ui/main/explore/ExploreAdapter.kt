@@ -8,9 +8,13 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
@@ -18,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatSpinner
 import androidx.collection.LruCache
 import androidx.core.view.children
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.google.android.flexbox.FlexboxLayout
 import com.script.rhino.runScriptWithContext
 import io.legado.app.R
@@ -34,19 +39,36 @@ import io.legado.app.databinding.ItemFilletTextBinding
 import io.legado.app.databinding.ItemFindBookBinding
 import io.legado.app.databinding.ItemFilletSelectorSingleBinding
 import io.legado.app.databinding.ItemFilletCompleteTextBinding
+import io.legado.app.databinding.ItemExploreHtmlBinding
+import io.legado.app.help.GlideImageGetter
+import io.legado.app.help.TextViewTagHandler
+import io.legado.app.help.WebCacheManager
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.webView.PooledWebView
+import io.legado.app.help.webView.WebJsExtensions
+import io.legado.app.help.webView.WebJsExtensions.Companion.getInjectionString
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
+import io.legado.app.help.webView.WebViewPool
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.dialog.TextDialog
+import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.ui.widget.text.AccentTextView
+import io.legado.app.ui.widget.text.ScrollTextView
 import io.legado.app.utils.InfoMap
 import io.legado.app.utils.activity
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
+import io.legado.app.utils.longSnackbar
+import io.legado.app.utils.openUrl
 import io.legado.app.utils.removeLastElement
+import io.legado.app.utils.setHtml
 import io.legado.app.utils.setSelectionSafely
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
@@ -71,11 +93,13 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
     private val recycler = arrayListOf<TextView>()
     private val textRecycler = arrayListOf<AutoCompleteTextView>()
     private val selectRecycler = arrayListOf<LinearLayout>()
+    private val htmlRecycler = arrayListOf<FrameLayout>()
 
     private var exIndex = -1
     private var scrollTo = -1
     private var lastClickTime: Long = 0
     private val sourceKinds = ConcurrentHashMap<String, List<ExploreKind>>()
+    private val activeWebViews = linkedMapOf<FrameLayout, PooledWebView>()
     private var saveInfoMapJob: Job? = null
 
     override fun getViewBinding(parent: ViewGroup): ItemFindBookBinding {
@@ -221,6 +245,13 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                             }
                             return@setOnTouchListener true
                         }
+                    }
+
+                    Type.html -> {
+                        val container = getFlexboxChildHtml(flexbox)
+                        flexbox.addView(container)
+                        kind.style().apply(container)
+                        bindHtmlView(container, kind, source, infoMap, title, sourceJsExtensions)
                     }
 
                     Type.button -> {
@@ -555,6 +586,155 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
     }
 
     @Synchronized
+    private fun getFlexboxChildHtml(flexbox: FlexboxLayout): FrameLayout {
+        return if (htmlRecycler.isEmpty()) {
+            ItemExploreHtmlBinding.inflate(inflater, flexbox, false).root
+        } else {
+            htmlRecycler.removeLastElement()
+        }
+    }
+
+    private fun bindHtmlView(
+        container: FrameLayout,
+        kind: ExploreKind,
+        source: BookSource?,
+        infoMap: InfoMap,
+        title: String,
+        sourceJsExtensions: SourceLoginJsExtensions
+    ) {
+        releaseWebView(container)
+        container.removeAllViews()
+        resolveHtmlContent(kind, source, infoMap, title).onSuccess { rawContent ->
+            val content = rawContent?.trim().orEmpty()
+            when {
+                content.startsWith("<useweb>") -> bindExploreWebView(container, content, source)
+                content.startsWith("<usehtml>") -> bindExploreTextView(
+                    container,
+                    content,
+                    source,
+                    infoMap,
+                    title,
+                    sourceJsExtensions
+                )
+                else -> {
+                    container.gone()
+                }
+            }
+        }.onError {
+            container.gone()
+        }
+    }
+
+    private fun resolveHtmlContent(
+        kind: ExploreKind,
+        source: BookSource?,
+        infoMap: InfoMap,
+        title: String
+    ) = Coroutine.async(callBack.scope, IO) {
+        kind.url?.takeIf { it.startsWith("<usehtml>") || it.startsWith("<useweb>") }
+            ?: title.takeIf { it.startsWith("<usehtml>") || it.startsWith("<useweb>") }
+            ?: kind.viewName?.let { viewName ->
+                when {
+                    viewName.length in 3..19 && viewName.first() == '\'' && viewName.last() == '\'' -> {
+                        viewName.substring(1, viewName.length - 1)
+                    }
+                    else -> evalUiJs(viewName, source, infoMap)
+                }
+            }
+    }
+
+    private fun bindExploreTextView(
+        container: FrameLayout,
+        content: String,
+        source: BookSource?,
+        infoMap: InfoMap,
+        title: String,
+        sourceJsExtensions: SourceLoginJsExtensions
+    ) {
+        val endIndex = content.lastIndexOf("<")
+        if (endIndex < 9) {
+            container.gone()
+            return
+        }
+        val html = content.substring(9, endIndex)
+        val textView = ScrollTextView(context, null).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            minHeight = 48.dpToPx()
+            setPadding(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+            textSize = 14F
+        }
+        val lifecycle = container.findViewTreeLifecycleOwner()?.lifecycle
+        val imageGetter = lifecycle?.let {
+            GlideImageGetter(
+                context,
+                textView,
+                it,
+                context.resources.displayMetrics.widthPixels - 48.dpToPx(),
+                source?.bookSourceUrl
+            )
+        }
+        val tagHandler = TextViewTagHandler(object : TextViewTagHandler.OnButtonClickListener {
+            override fun onButtonClick(name: String, click: String) {
+                callBack.scope.launch(IO) {
+                    evalButtonClick(click, source, infoMap, "$title $name", sourceJsExtensions)
+                }
+            }
+        })
+        textView.setHtml(
+            html,
+            imageGetter,
+            tagHandler,
+            imgOnLongClickListener = {
+                container.activity?.showDialogFragment(PhotoDialog(it, source?.bookSourceUrl))
+            },
+            imgOnClickListener = { click ->
+                callBack.scope.launch(IO) {
+                    evalButtonClick(click, source, infoMap, "$title image", sourceJsExtensions)
+                }
+            }
+        )
+        container.addView(textView)
+        container.visible()
+    }
+
+    private fun bindExploreWebView(
+        container: FrameLayout,
+        content: String,
+        source: BookSource?
+    ) {
+        val endIndex = content.lastIndexOf("<")
+        if (endIndex < 8) {
+            container.gone()
+            return
+        }
+        val html = content.substring(8, endIndex)
+        val pooledWebView = WebViewPool.acquire(context)
+        val webView = pooledWebView.realWebView
+        webView.onResume()
+        webView.webViewClient = ExploreHtmlWebViewClient(container)
+        webView.addJavascriptInterface(WebCacheManager, nameCache)
+        source?.let {
+            webView.addJavascriptInterface(it as BaseSource, nameSource)
+            val webJsExtensions = WebJsExtensions(it, null, webView)
+            webView.addJavascriptInterface(webJsExtensions, nameJava)
+        }
+        container.addView(webView)
+        activeWebViews[container] = pooledWebView
+        val baseUrl = source?.bookSourceUrl?.takeIf { it.startsWith("http", true) }
+        webView.loadDataWithBaseURL(baseUrl, html, "text/html", "utf-8", baseUrl)
+        container.visible()
+    }
+
+    private fun releaseWebView(container: FrameLayout) {
+        activeWebViews.remove(container)?.let {
+            WebViewPool.release(it)
+        }
+    }
+
+    @Synchronized
     private fun recyclerFlexbox(flexbox: FlexboxLayout) {
         val children = flexbox.children.toList()
         if (children.isEmpty()) return
@@ -577,6 +757,11 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                     is LinearLayout -> {
                         child.findViewById<AppCompatSpinner>(R.id.sp_type)?.onItemSelectedListener = null
                         selectRecycler.add(child)
+                    }
+                    is FrameLayout -> {
+                        releaseWebView(child)
+                        child.removeAllViews()
+                        htmlRecycler.add(child)
                     }
                 }
             }
@@ -615,6 +800,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
 
     fun onPause() {
         sourceKinds.clear()
+        activeWebViews.keys.toList().forEach(::releaseWebView)
         saveInfoMapJob?.cancel()
         saveInfoMapJob = callBack.scope.launch {
             exploreInfoMapList.snapshot().filter { (_, infoMap) -> infoMap.needSave }.map { (_, infoMap) ->
@@ -672,5 +858,47 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         fun deleteSource(source: BookSourcePart)
         fun searchBook(bookSource: BookSourcePart)
         fun showKindQueryDialog(source: BookSourcePart)
+    }
+
+    private inner class ExploreHtmlWebViewClient(
+        private val container: FrameLayout
+    ) : WebViewClient() {
+        private val jsStr = getInjectionString
+
+        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+            request?.let {
+                val uri = it.url
+                return when (uri.scheme) {
+                    "http", "https" -> false
+                    "legado", "yuedu" -> {
+                        context.startActivity<OnLineImportActivity> {
+                            data = uri
+                        }
+                        true
+                    }
+
+                    else -> {
+                        container.activity?.findViewById<View>(android.R.id.content)
+                            ?.longSnackbar(R.string.jump_to_another_app, R.string.confirm) {
+                                container.activity?.openUrl(uri)
+                            }
+                        true
+                    }
+                }
+            }
+            return true
+        }
+
+        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+            super.onPageStarted(view, url, favicon)
+            view?.evaluateJavascript(jsStr, null)
+        }
+
+        override fun onPageFinished(view: WebView?, url: String?) {
+            super.onPageFinished(view, url)
+            container.post {
+                container.requestLayout()
+            }
+        }
     }
 }

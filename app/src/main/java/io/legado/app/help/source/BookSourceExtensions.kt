@@ -6,6 +6,7 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.rule.ExploreKind
+import io.legado.app.data.entities.rule.FlexChildStyle
 import io.legado.app.ui.main.explore.ExploreAdapter.Companion.exploreInfoMapList
 import io.legado.app.utils.ACache
 import io.legado.app.utils.GSON
@@ -84,7 +85,19 @@ suspend fun BookSource.exploreKinds(): List<ExploreKind> {
                     }
                     else -> exploreUrl
                 }
-                if (ruleStr.isJsonArray()) {
+                val trimRule = ruleStr.trim()
+                if (trimRule.startsWith("<usehtml>") || trimRule.startsWith("<useweb>")) {
+                    kinds.add(
+                        ExploreKind(
+                            title = trimRule,
+                            type = ExploreKind.Type.html,
+                            style = FlexChildStyle(
+                                layout_flexBasisPercent = 1F,
+                                layout_wrapBefore = true
+                            )
+                        )
+                    )
+                } else if (ruleStr.isJsonArray()) {
                     GSON.fromJsonArray<ExploreKind>(ruleStr).getOrThrow().let {
                         kinds.addAll(it)
                     }

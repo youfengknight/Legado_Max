@@ -18,6 +18,7 @@ data class ExploreKind(
     object Type {
 
         const val url = "url"
+        const val html = "html"
         const val text = "text"
         const val button = "button"
         const val toggle = "toggle"
