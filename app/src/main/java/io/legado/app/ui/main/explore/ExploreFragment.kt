@@ -69,11 +69,17 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     private val searchView: SearchView by lazy {
         binding.titleBar.findViewById(R.id.search_view)
     }
+    // 列表项差异比较回调
     private val diffItemCallBack = ExploreDiffItemCallBack()
+    // 书源分组集合
     private val groups = linkedSetOf<String>()
+    // 发现数据流任务
     private var exploreFlowJob: Job? = null
+    // 分组菜单
     private var groupsMenu: SubMenu? = null
+    // 排序方式
     private var sort = BookSourceSort.Default
+    // 是否升序排序
     private var sortAscending = true
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
@@ -84,13 +90,24 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         upExploreData()
     }
 
+    /**
+     * 创建选项菜单
+     * 初始化菜单布局，设置排序菜单项状态，并更新分组菜单
+     */
     override fun onCompatCreateOptionsMenu(menu: Menu) {
         super.onCompatCreateOptionsMenu(menu)
         menuInflater.inflate(R.menu.main_explore, menu)
         groupsMenu = menu.findItem(R.id.menu_group)?.subMenu
+        val sortSubMenu = menu.findItem(R.id.action_sort).subMenu
+        sortSubMenu?.findItem(R.id.menu_sort_desc)?.isChecked = !sortAscending
+        sortSubMenu?.setGroupCheckable(R.id.menu_group_sort, true, true)
         upGroupsMenu()
     }
 
+    /**
+     * 准备选项菜单
+     * 更新排序菜单项的选中状态
+     */
     override fun onPrepareOptionsMenu(menu: Menu) {
         val sortSubMenu = menu.findItem(R.id.action_sort).subMenu!!
         sortSubMenu.findItem(R.id.menu_sort_desc).isChecked = !sortAscending

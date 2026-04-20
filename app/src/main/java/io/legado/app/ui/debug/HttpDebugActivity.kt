@@ -34,6 +34,10 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
     private var lastResponse: StrResponse? = null
     private var lastRequestSrc: String? = null
 
+    /**
+     * UA选择器显示名称列表
+     * 对应uaValues中的UA字符串
+     */
     private val uaNames by lazy {
         listOf(
             getString(R.string.debug_ua_default),
@@ -45,6 +49,11 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         )
     }
 
+    /**
+     * 预设UA值列表
+     * 索引0为空字符串，表示使用AppConfig.userAgent全局配置
+     * 索引5为空字符串，表示使用自定义UA
+     */
     private val uaValues by lazy {
         listOf(
             "",
@@ -56,6 +65,10 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         )
     }
 
+    /**
+     * 用户自定义的UA字符串
+     * 当选择"自定义"选项时，通过对话框输入
+     */
     private var customUa: String = ""
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -135,6 +148,10 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         }
     }
 
+    /**
+     * 初始化UA选择器
+     * 提供预设UA选项和自定义UA入口
+     */
     private fun initUaSpinner() {
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, uaNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -150,6 +167,11 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         }
     }
 
+    /**
+     * 显示自定义UA输入对话框
+     * 用户可以输入任意UA字符串
+     * 取消时恢复选择为默认UA
+     */
     private fun showCustomUaDialog() {
         val dialogBinding = io.legado.app.databinding.DialogEditTextBinding.inflate(layoutInflater)
         dialogBinding.editView.hint = getString(R.string.debug_user_agent)
@@ -169,6 +191,10 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
             .show()
     }
 
+    /**
+     * 获取当前选中的UA字符串
+     * @return 选中的UA值，默认选项返回AppConfig.userAgent，自定义选项返回用户输入的值
+     */
     private fun getSelectedUa(): String {
         val position = binding.spinnerUa.selectedItemPosition
         return when {
@@ -257,6 +283,15 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         }
     }
 
+    /**
+     * 构建请求源码字符串，用于显示请求详情
+     * @param url 请求URL
+     * @param methodIndex 请求方法索引（0=GET, 1=POST）
+     * @param headersText 用户输入的请求头文本
+     * @param bodyText 请求体内容
+     * @param userAgent 当前使用的UA字符串
+     * @return 格式化的请求源码字符串
+     */
     private fun buildRequestSrc(url: String, methodIndex: Int, headersText: String, bodyText: String, userAgent: String): String {
         val sb = StringBuilder()
         sb.append("=== 请求行 ===\n")
