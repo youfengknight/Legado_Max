@@ -36,9 +36,9 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         initClick()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.http_debug, menu)
-        return super.onCreateOptionsMenu(menu)
+        return super.onCompatCreateOptionsMenu(menu)
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
@@ -47,13 +47,13 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         return super.onPrepareOptionsMenu(menu)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_response_src -> showResponseSrc()
             R.id.menu_request_src -> showRequestSrc()
             R.id.menu_clear -> clearAll()
         }
-        return super.onOptionsItemSelected(item)
+        return super.onCompatOptionsItemSelected(item)
     }
 
     private fun showResponseSrc() {
@@ -88,7 +88,7 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         AlertDialog.Builder(this)
             .setTitle(R.string.debug_response_src)
             .setView(scrollView)
-            .setPositiveButton(R.string.copy) { _, _ ->
+            .setPositiveButton(R.string.copy_text) { _, _ ->
                 sendToClip(content)
             }
             .setNegativeButton(android.R.string.cancel, null)

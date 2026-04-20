@@ -29,6 +29,7 @@ import io.legado.app.ui.debug.DebugToolsActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.main.MainFragmentInterface
+import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.getPrefBoolean
@@ -81,6 +82,7 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             putPrefBoolean(PreferKey.webService, WebService.isRun)
             addPreferencesFromResource(R.xml.pref_main)
+            findPreference<Preference>("debugTools")?.isVisible = AppConfig.debugMode
             findPreference<SwitchPreference>("webService")?.onLongClick {
                 if (!WebService.isRun) {
                     return@onLongClick false
@@ -137,6 +139,10 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                     } else {
                         WebService.stop(requireContext())
                     }
+                }
+
+                PreferKey.debugMode -> {
+                    findPreference<Preference>("debugTools")?.isVisible = AppConfig.debugMode
                 }
 
                 "recordLog" -> LogUtils.upLevel()

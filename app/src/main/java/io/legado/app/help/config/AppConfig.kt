@@ -294,6 +294,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val showRSS: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showRss, true)
 
+    val debugMode: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.debugMode, false)
+
     val autoRefreshBook: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.autoRefresh)
 
