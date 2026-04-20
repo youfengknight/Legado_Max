@@ -1,4 +1,5 @@
 *.iml
+.codex-home
 .gradle
 .gradle-user-home
 local.properties
