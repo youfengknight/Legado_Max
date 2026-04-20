@@ -182,25 +182,36 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                     appDb.bookSourceDao.flowExplore(searchKey)
                 }
             }.map { data ->
+                // 根据排序方式和排序方向对数据进行排序
                 if (sortAscending) {
+                    // 升序排序
                     when (sort) {
+                        // 按书源名称排序
                         BookSourceSort.Name -> data.sortedWith { o1, o2 ->
                             o1.bookSourceName.cnCompare(o2.bookSourceName)
                         }
 
+                        // 按书源URL排序
                         BookSourceSort.Url -> data.sortedBy { it.bookSourceUrl }
+                        // 按更新时间排序（最新的在前）
                         BookSourceSort.Update -> data.sortedByDescending { it.lastUpdateTime }
+                        // 按响应时间排序
                         BookSourceSort.Respond -> data.sortedBy { it.respondTime }
                         else -> data
                     }
                 } else {
+                    // 降序排序
                     when (sort) {
+                        // 按书源名称排序
                         BookSourceSort.Name -> data.sortedWith { o1, o2 ->
                             o2.bookSourceName.cnCompare(o1.bookSourceName)
                         }
 
+                        // 按书源URL排序
                         BookSourceSort.Url -> data.sortedByDescending { it.bookSourceUrl }
+                        // 按更新时间排序（最旧的在前）
                         BookSourceSort.Update -> data.sortedBy { it.lastUpdateTime }
+                        // 按响应时间排序
                         BookSourceSort.Respond -> data.sortedByDescending { it.respondTime }
                         else -> data.reversed()
                     }
