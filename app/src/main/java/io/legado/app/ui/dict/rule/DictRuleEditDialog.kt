@@ -142,13 +142,18 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
      * 输入框按回车键或点击搜索按钮触发搜索
      */
     private fun showDebugDialog(dictRule: DictRule) {
+        // 初始化 ViewBinding
         val dialogBinding = DialogDictRuleDebugBinding.inflate(LayoutInflater.from(requireContext()))
+
+        // 加载搜索历史记录并设置到输入框的下拉列表
         val history = DictDebugConfig.getSearchHistory()
         dialogBinding.inputView.setFilterValues(history)
 
+        // 存储 URL 原始响应和解析结果，用于三点菜单查看源码
         var urlSrc: String = ""
         var resultSrc: String = ""
 
+        // 搜索操作的 Lambda 表达式
         val performSearch = {
             val word = dialogBinding.inputView.text.toString()
             if (word.isBlank()) {
@@ -156,6 +161,10 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
             } else {
                 DictDebugConfig.addSearchHistory(word)
                 dialogBinding.viewResult.text = "正在搜索..."
+                dialog?.window?.setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
                 viewModel.debugSearch(dictRule, word) { result, urlResponse ->
                     urlSrc = urlResponse
                     resultSrc = result
@@ -164,6 +173,7 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
             }
         }
 
+        // 输入框回车键监听，触發搜索
         dialogBinding.inputView.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 performSearch()
@@ -173,13 +183,16 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
             }
         }
 
+        // 搜索按钮点击事件
         dialogBinding.btnSearch.setOnClickListener {
             performSearch()
         }
 
+        // 配置 Toolbar 和菜单
         dialogBinding.toolBar.setBackgroundColor(primaryColor)
         dialogBinding.toolBar.inflateMenu(R.menu.dict_rule_debug)
         dialogBinding.toolBar.menu.applyTint(requireContext())
+        // 菜单点击事件处理：查看 URL 源码和结果源码
         dialogBinding.toolBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_url_src -> {
@@ -200,6 +213,7 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
             true
         }
 
+        // 创建并显示对话框
         alert {
             customView { dialogBinding.root }
             okButton {
@@ -314,6 +328,7 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
                 )
                 val response = analyzeUrl.getStrResponseAwait()
                 val body = response.body ?: ""
+                // 根据 showRule 判断是否需要解析
                 val result = if (dictRule.showRule.isBlank()) {
                     body
                 } else {
@@ -323,6 +338,7 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
                 }
                 result to body
             }.onSuccess {
+                // 回调返回解析结果和原始响应
                 onSuccess.invoke(it.first, it.second)
             }.onError {
                 context.toastOnUi("调试失败: ${it.localizedMessage}")
