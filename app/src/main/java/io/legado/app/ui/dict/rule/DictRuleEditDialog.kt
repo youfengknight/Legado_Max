@@ -24,6 +24,7 @@ import io.legado.app.databinding.DialogDictRuleEditBinding
 import io.legado.app.help.config.DictDebugConfig
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.AnalyzeRule
+import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.primaryColor
@@ -318,7 +319,7 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
                 } else {
                     val analyzeRule = AnalyzeRule().setCoroutineContext(currentCoroutineContext())
                     analyzeRule.setRuleName(dictRule.name)
-                    analyzeRule.getString(dictRule.showRule, mContent = body)
+                    analyzeRule.getString(dictRule.showRule, mContent = body) ?: body
                 }
                 result to body
             }.onSuccess {
