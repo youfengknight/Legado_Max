@@ -78,6 +78,7 @@ import java.util.regex.PatternSyntaxException
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.rss.article.ReadRecordDialog
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
+import io.legado.app.ui.widget.dialog.CookieViewerDialog
 import io.legado.app.utils.StartActivityContract
 import kotlinx.coroutines.runBlocking
 import androidx.core.net.toUri
@@ -290,6 +291,9 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                     putExtra("sourceUrl", it)
                 }
             }
+            R.id.menu_view_cookie -> currentWebView.url?.let {
+                showDialogFragment(CookieViewerDialog(it))
+            } ?: toastOnUi("url null")
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
             R.id.menu_read_record -> showDialogFragment(ReadRecordDialog(viewModel.rssSource?.sourceUrl))
         }
