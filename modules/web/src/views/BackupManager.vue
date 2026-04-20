@@ -245,33 +245,33 @@ const handleBackup = async () => {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f0f2f5;
   padding: 40px 20px;
 
   &.dark {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: #141414;
   }
 }
 
 .backup-card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 40px;
   max-width: 560px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   text-align: center;
 
   .dark & {
-    background: #2d2d2d;
+    background: #1f1f1f;
   }
 }
 
 .title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
-  color: #1a1a2e;
-  margin: 0 0 8px 0;
+  color: #1a1a1a;
+  margin: 0 0 6px 0;
 
   .dark & {
     color: #e5eaf3;
@@ -279,34 +279,33 @@ const handleBackup = async () => {
 }
 
 .subtitle {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 32px 0;
+  font-size: 13px;
+  color: #888;
+  margin: 0 0 28px 0;
 
   .dark & {
-    color: #999;
+    color: #666;
   }
 }
 
 .download-btn {
   width: 100%;
-  padding: 16px 32px;
-  font-size: 16px;
+  padding: 14px 32px;
+  font-size: 15px;
   font-weight: 500;
   color: #fff;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #4a7af5;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.2s ease;
 
   &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    background: #3a6ae0;
   }
 
   &:disabled {
-    opacity: 0.7;
+    opacity: 0.6;
     cursor: not-allowed;
   }
 
@@ -316,7 +315,7 @@ const handleBackup = async () => {
 }
 
 .result-section {
-  margin-top: 32px;
+  margin-top: 28px;
   text-align: left;
 }
 
@@ -324,20 +323,20 @@ const handleBackup = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid #eee;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
-  color: #1a1a2e;
+  color: #1a1a1a;
 
   .dark & {
-    border-bottom-color: #444;
+    border-bottom-color: #333;
     color: #e5eaf3;
   }
 
   .success-icon {
     color: #52c41a;
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .time {
@@ -351,7 +350,7 @@ const handleBackup = async () => {
 .result-info {
   display: flex;
   gap: 24px;
-  padding: 16px 0;
+  padding: 14px 0;
 
   .info-item {
     display: flex;
@@ -364,9 +363,9 @@ const handleBackup = async () => {
     }
 
     .value {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
-      color: #1a1a2e;
+      color: #1a1a1a;
 
       .dark & {
         color: #e5eaf3;
@@ -376,51 +375,51 @@ const handleBackup = async () => {
 }
 
 .category-list {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .category-item {
-  margin-bottom: 8px;
-  border-radius: 10px;
+  margin-bottom: 6px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid #eee;
 
   .dark & {
-    border-color: #3a3a3a;
+    border-color: #2e2e2e;
   }
 }
 
 .category-header {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  background: #f8f9fa;
+  padding: 10px 14px;
+  background: #fafafa;
   cursor: pointer;
   user-select: none;
-  transition: background 0.2s;
+  transition: background 0.15s;
 
   &:hover {
-    background: #eef0f3;
+    background: #f5f5f5;
   }
 
   .dark & {
-    background: #363636;
+    background: #262626;
 
     &:hover {
-      background: #3e3e3e;
+      background: #2a2a2a;
     }
   }
 
   .category-icon {
-    font-size: 20px;
-    margin-right: 10px;
+    font-size: 18px;
+    margin-right: 8px;
   }
 
   .category-name {
     flex: 1;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    color: #1a1a2e;
+    color: #1a1a1a;
 
     .dark & {
       color: #e5eaf3;
@@ -429,20 +428,20 @@ const handleBackup = async () => {
 
   .category-count {
     font-size: 12px;
-    color: #667eea;
-    margin-right: 12px;
+    color: #4a7af5;
+    margin-right: 10px;
   }
 
   .category-size {
     font-size: 12px;
     color: #999;
-    margin-right: 12px;
+    margin-right: 10px;
   }
 
   .category-arrow {
-    font-size: 18px;
-    color: #999;
-    transition: transform 0.3s ease;
+    font-size: 16px;
+    color: #bbb;
+    transition: transform 0.25s ease;
 
     &.expanded {
       transform: rotate(90deg);
@@ -451,18 +450,18 @@ const handleBackup = async () => {
 }
 
 .category-detail {
-  padding: 4px 0;
+  padding: 2px 0;
   background: #fff;
   border-top: 1px solid #f0f0f0;
 
   .dark & {
-    background: #2d2d2d;
-    border-top-color: #3a3a3a;
+    background: #1f1f1f;
+    border-top-color: #2e2e2e;
   }
 }
 
 .detail-item {
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-bottom: 1px solid #f5f5f5;
 
   &:last-child {
@@ -470,18 +469,18 @@ const handleBackup = async () => {
   }
 
   .dark & {
-    border-bottom-color: #333;
+    border-bottom-color: #262626;
   }
 }
 
 .detail-main {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .detail-icon {
-  font-size: 18px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
@@ -493,7 +492,7 @@ const handleBackup = async () => {
     display: block;
     font-size: 13px;
     font-weight: 500;
-    color: #1a1a2e;
+    color: #1a1a1a;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -523,7 +522,7 @@ const handleBackup = async () => {
 
   .detail-count {
     font-size: 12px;
-    color: #667eea;
+    color: #4a7af5;
     font-weight: 500;
   }
 
@@ -536,35 +535,35 @@ const handleBackup = async () => {
 .detail-file-row {
   display: flex;
   align-items: center;
-  margin-top: 6px;
-  padding: 4px 28px;
-  background: #f8f9fa;
-  border-radius: 4px;
+  margin-top: 5px;
+  padding: 3px 24px;
+  background: #fafafa;
+  border-radius: 3px;
 
   .dark & {
-    background: #363636;
+    background: #262626;
   }
 
   .detail-filename {
     flex: 1;
     font-size: 11px;
     font-family: 'Courier New', monospace;
-    color: #888;
+    color: #999;
 
     .dark & {
-      color: #777;
+      color: #666;
     }
   }
 
   .detail-filesize {
     font-size: 11px;
-    color: #aaa;
+    color: #bbb;
   }
 }
 
 .error-msg {
-  margin-top: 16px;
-  padding: 12px;
+  margin-top: 14px;
+  padding: 10px;
   background: #fff2f0;
   border: 1px solid #ffccc7;
   border-radius: 6px;
@@ -579,7 +578,7 @@ const handleBackup = async () => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 
 .fade-enter-from,
@@ -589,7 +588,7 @@ const handleBackup = async () => {
 
 .expand-enter-active,
 .expand-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   overflow: hidden;
 }
 
@@ -606,11 +605,11 @@ const handleBackup = async () => {
 
 @media screen and (max-width: 520px) {
   .backup-card {
-    padding: 28px 20px;
+    padding: 24px 18px;
   }
 
   .title {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .result-info {

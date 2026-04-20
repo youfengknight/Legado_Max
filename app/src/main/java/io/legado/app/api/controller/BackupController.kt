@@ -285,11 +285,9 @@ object BackupController {
      */
     private suspend fun writeListToJson(list: List<Any>, fileName: String, path: String) {
         withContext(Dispatchers.IO) {
-            if (list.isNotEmpty()) {
-                val file = FileUtils.createFileIfNotExist(path + File.separator + fileName)
-                file.outputStream().buffered().use {
-                    GSON.writeToOutputStream(it, list)
-                }
+            val file = FileUtils.createFileIfNotExist(path + File.separator + fileName)
+            file.outputStream().buffered().use {
+                GSON.writeToOutputStream(it, list)
             }
         }
     }
