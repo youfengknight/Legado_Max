@@ -1395,6 +1395,6 @@
     <string name="debug_date_to_timestamp">日期转时间戳</string>
     <string name="debug_now">获取当前时间</string>
     <string name="input_is_empty">输入不能为空</string>
-    <string name="debug_response_src">响应体源码</string>
     <string name="debug_request_src">请求体源码</string>
+    <string name="debug_response_src">响应体源码</string>
 </resources>
