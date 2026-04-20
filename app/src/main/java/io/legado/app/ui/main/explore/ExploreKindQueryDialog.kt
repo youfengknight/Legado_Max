@@ -47,8 +47,10 @@ class ExploreKindQueryDialog() : BaseDialogFragment(R.layout.dialog_explore_kind
 
     override fun onAttach(context: android.content.Context) {
         super.onAttach(context)
-        if (context is ExploreAdapter.CallBack) {
-            callBack = context
+        callBack = when {
+            parentFragment is ExploreAdapter.CallBack -> parentFragment as ExploreAdapter.CallBack
+            context is ExploreAdapter.CallBack -> context
+            else -> null
         }
     }
 
