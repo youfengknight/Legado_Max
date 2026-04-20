@@ -43,6 +43,7 @@ object PreferKey {
     const val showDiscovery = "showDiscovery"
     const val enableReview = "enableReview"
     const val showRss = "showRss"
+    const val debugMode = "debugMode" // 调试模式开关，控制"我的"页面调试工具入口显示
     const val bookshelfLayout = "bookshelfLayout"
     const val bookshelfSort = "bookshelfSort"
     const val bookExportFileName = "bookExportFileName"

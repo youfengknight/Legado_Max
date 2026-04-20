@@ -33,6 +33,7 @@ import kotlinx.coroutines.cancelChildren
 import splitties.init.appCtx
 import kotlin.text.trim
 
+
 @SuppressLint("StaticFieldLeak")
 @Suppress("unused")
 object AudioPlay : CoroutineScope by MainScope() {

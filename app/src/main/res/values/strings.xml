@@ -650,6 +650,8 @@
     <string name="tone_colour">Online Speech tone</string>
     <string name="select_count">(%1$d/%2$d)</string>
     <string name="show_rss">Show RSS feeds</string>
+    <string name="debug_mode">调试模式</string>
+    <string name="debug_mode_summary">开启后显示调试工具入口</string>
     <string name="service_stop">Service stopped</string>
     <string name="service_start">Starting service\nChecking notification bar for details</string>
     <string name="default_path">Default path</string>
@@ -933,6 +935,7 @@
     <string name="chapter_pay">pay</string>
     <string name="double_page_horizontal">Tablet/Landscape Dual Page</string>
     <string name="open_in_browser">open in browser</string>
+    <string name="view_cookie">View Cookie</string>
     <string name="copy_url">copy url</string>
     <string name="full_screen">full screen</string>
     <string name="open_fun">open function</string>
@@ -1348,4 +1351,50 @@
     <string name="is_system_tts_no_export">无法导出系统tts</string>
     <string name="click_image_way">点击图片方式</string>
     <string name="auto_update_summary">每天自动检查软件是否更新</string>
+
+    <!-- Debug Tools -->
+    <string name="debug_tools">调试工具</string>
+    <string name="debug_tools_desc">编码转换、HTTP请求、正则测试等调试工具</string>
+    <string name="debug_encode_tools">编码转换</string>
+    <string name="debug_encode_tools_desc">Base64/MD5/URL/Hex/Unicode 编解码</string>
+    <string name="debug_http_request">HTTP请求调试</string>
+    <string name="debug_http_request_desc">发送HTTP请求并查看响应</string>
+    <string name="debug_regex_test">正则测试</string>
+    <string name="debug_regex_test_desc">测试正则表达式匹配</string>
+    <string name="debug_timestamp">时间戳转换</string>
+    <string name="debug_timestamp_desc">时间戳与日期互相转换</string>
+    <string name="debug_encode_type">编码类型</string>
+    <string name="debug_input">输入</string>
+    <string name="debug_input_hint">请输入要转换的内容</string>
+    <string name="debug_result">结果</string>
+    <string name="debug_convert">转换</string>
+    <string name="debug_swap">交换</string>
+    <string name="debug_url_hint">请输入URL</string>
+    <string name="debug_url_empty">URL不能为空</string>
+    <string name="debug_headers">请求头</string>
+    <string name="debug_headers_hint">每行一个，格式: Key: Value</string>
+    <string name="debug_body">请求体</string>
+    <string name="debug_send">发送</string>
+    <string name="debug_response_headers">响应头</string>
+    <string name="debug_response_body">响应体</string>
+    <string name="debug_loading">加载中...</string>
+    <string name="debug_regex_pattern">正则表达式</string>
+    <string name="debug_regex_pattern_hint">请输入正则表达式</string>
+    <string name="debug_regex_ignore_case">忽略大小写</string>
+    <string name="debug_regex_multiline">多行模式</string>
+    <string name="debug_regex_dot_all">.匹配换行</string>
+    <string name="debug_test">测试</string>
+    <string name="debug_no_match">没有匹配结果</string>
+    <string name="debug_highlight">高亮显示</string>
+    <string name="debug_pattern_empty">正则表达式不能为空</string>
+    <string name="debug_timestamp_title">时间戳 (毫秒)</string>
+    <string name="debug_timestamp_hint">请输入时间戳</string>
+    <string name="debug_timestamp_to_date">时间戳转日期</string>
+    <string name="debug_date_title">日期字符串</string>
+    <string name="debug_date_hint">请输入日期</string>
+    <string name="debug_date_to_timestamp">日期转时间戳</string>
+    <string name="debug_now">获取当前时间</string>
+    <string name="input_is_empty">输入不能为空</string>
+    <string name="debug_request_src">请求体源码</string>
+    <string name="debug_response_src">响应体源码</string>
 </resources>

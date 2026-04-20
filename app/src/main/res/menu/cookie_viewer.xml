@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cookie查看对话框菜单 -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="AlwaysShowAction">
+
+    <!-- 刷新Cookie -->
+    <item
+        android:id="@+id/menu_refresh"
+        android:title="@string/refresh"
+        app:showAsAction="never" />
+
+    <!-- 复制所有Cookie -->
+    <item
+        android:id="@+id/menu_copy_all"
+        android:title="@string/copy_all"
+        app:showAsAction="never" />
+
+</menu>

@@ -32,6 +32,13 @@
         android:title="@string/dict_rule"
         app:iconSpaceReserved="false" />
 
+    <io.legado.app.lib.prefs.Preference
+        android:icon="@drawable/ic_code"
+        android:key="debugTools"
+        android:summary="@string/debug_tools_desc"
+        android:title="@string/debug_tools"
+        app:iconSpaceReserved="false" />
+
     <io.legado.app.lib.prefs.NameListPreference
         android:defaultValue="0"
         android:entries="@array/theme_mode"

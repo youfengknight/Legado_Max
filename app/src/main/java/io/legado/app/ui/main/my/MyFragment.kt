@@ -25,12 +25,15 @@ import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.config.ConfigActivity
 import io.legado.app.ui.config.ConfigTag
+import io.legado.app.ui.debug.DebugToolsActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.main.MainFragmentInterface
+import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.observeEvent
 import io.legado.app.utils.observeEventSticky
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.putPrefBoolean
@@ -80,6 +83,8 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             putPrefBoolean(PreferKey.webService, WebService.isRun)
             addPreferencesFromResource(R.xml.pref_main)
+            // 根据调试模式设置决定是否显示调试工具入口
+            findPreference<Preference>("debugTools")?.isVisible = AppConfig.debugMode
             findPreference<SwitchPreference>("webService")?.onLongClick {
                 if (!WebService.isRun) {
                     return@onLongClick false
@@ -107,6 +112,10 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                     view?.post { ThemeConfig.applyDayNight(requireContext()) }
                     true
                 }
+            }
+            // 监听调试模式变化事件，实时更新调试工具入口显示状态
+            observeEvent<Boolean>(EventBus.DEBUG_MODE_CHANGED) {
+                findPreference<Preference>("debugTools")?.isVisible = AppConfig.debugMode
             }
         }
 
@@ -138,6 +147,10 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                     }
                 }
 
+                PreferKey.debugMode -> {
+                    findPreference<Preference>("debugTools")?.isVisible = AppConfig.debugMode
+                }
+
                 "recordLog" -> LogUtils.upLevel()
             }
         }
@@ -148,6 +161,7 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                 "replaceManage" -> startActivity<ReplaceRuleActivity>()
                 "dictRuleManage" -> startActivity<DictRuleActivity>()
                 "txtTocRuleManage" -> startActivity<TxtTocRuleActivity>()
+                "debugTools" -> startActivity<DebugToolsActivity>()
                 "bookmark" -> startActivity<AllBookmarkActivity>()
                 "setting" -> startActivity<ConfigActivity> {
                     putExtra("configTag", ConfigTag.OTHER_CONFIG)

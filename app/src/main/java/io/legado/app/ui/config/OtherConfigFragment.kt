@@ -209,6 +209,8 @@ class OtherConfigFragment : PreferenceFragment(),
             }
 
             PreferKey.showDiscovery, PreferKey.showRss -> postEvent(EventBus.NOTIFY_MAIN, true)
+            // 调试模式变化时发送事件，通知"我的"页面更新调试工具入口显示
+            PreferKey.debugMode -> postEvent(EventBus.DEBUG_MODE_CHANGED, true)
             PreferKey.language -> listView.postDelayed(1000) {
                 appCtx.restart()
             }

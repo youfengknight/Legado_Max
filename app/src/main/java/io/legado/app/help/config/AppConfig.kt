@@ -294,6 +294,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val showRSS: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showRss, true)
 
+    // 调试模式，开启后"我的"页面显示调试工具入口
+    val debugMode: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.debugMode, false)
+
     val autoRefreshBook: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.autoRefresh)
 

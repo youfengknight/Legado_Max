@@ -326,6 +326,27 @@
             android:name=".ui.dict.rule.DictRuleActivity"
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true" />
+        <!-- 调试工具 -->
+        <activity
+            android:name=".ui.debug.DebugToolsActivity"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
+        <activity
+            android:name=".ui.debug.EncodeToolsActivity"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
+        <activity
+            android:name=".ui.debug.HttpDebugActivity"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
+        <activity
+            android:name=".ui.debug.RegexTestActivity"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
+        <activity
+            android:name=".ui.debug.TimestampConvertActivity"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
         <!-- 文件管理 -->
         <activity
             android:name=".ui.file.FileManageActivity"

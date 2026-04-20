@@ -39,4 +39,5 @@ object EventBus {
     const val REFRESH_BOOK_CONTENT = "refreshBookContent"
     const val REFRESH_BOOK_TOC = "refreshBookToc"
     const val UP_VIDEO_INFO = "upVideoInfo"
+    const val DEBUG_MODE_CHANGED = "debugModeChanged" // 调试模式状态变化通知
 }
