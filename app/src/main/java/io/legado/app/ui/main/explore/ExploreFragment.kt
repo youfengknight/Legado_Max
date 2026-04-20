@@ -24,10 +24,12 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.ui.book.explore.ExploreShowActivity
+import io.legado.app.ui.book.source.manage.BookSourceSort
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.main.MainFragmentInterface
 import io.legado.app.utils.applyTint
+import io.legado.app.utils.cnCompare
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChange
 import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.showDialogFragment
@@ -42,6 +44,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -70,6 +73,8 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     private val groups = linkedSetOf<String>()
     private var exploreFlowJob: Job? = null
     private var groupsMenu: SubMenu? = null
+    private var sort = BookSourceSort.Default
+    private var sortAscending = true
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         setSupportToolbar(binding.titleBar.toolbar)
@@ -84,6 +89,13 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         menuInflater.inflate(R.menu.main_explore, menu)
         groupsMenu = menu.findItem(R.id.menu_group)?.subMenu
         upGroupsMenu()
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        val sortSubMenu = menu.findItem(R.id.action_sort).subMenu
+        sortSubMenu?.findItem(R.id.menu_sort_desc)?.isChecked = !sortAscending
+        sortSubMenu?.setGroupCheckable(R.id.menu_group_sort, true, true)
+        super.onPrepareOptionsMenu(menu)
     }
 
     private fun initSearchView() {
@@ -152,6 +164,30 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                 else -> {
                     appDb.bookSourceDao.flowExplore(searchKey)
                 }
+            }.map { data ->
+                if (sortAscending) {
+                    when (sort) {
+                        BookSourceSort.Name -> data.sortedWith { o1, o2 ->
+                            o1.bookSourceName.cnCompare(o2.bookSourceName)
+                        }
+
+                        BookSourceSort.Url -> data.sortedBy { it.bookSourceUrl }
+                        BookSourceSort.Update -> data.sortedByDescending { it.lastUpdateTime }
+                        BookSourceSort.Respond -> data.sortedBy { it.respondTime }
+                        else -> data
+                    }
+                } else {
+                    when (sort) {
+                        BookSourceSort.Name -> data.sortedWith { o1, o2 ->
+                            o2.bookSourceName.cnCompare(o1.bookSourceName)
+                        }
+
+                        BookSourceSort.Url -> data.sortedByDescending { it.bookSourceUrl }
+                        BookSourceSort.Update -> data.sortedBy { it.lastUpdateTime }
+                        BookSourceSort.Respond -> data.sortedByDescending { it.respondTime }
+                        else -> data.reversed()
+                    }
+                }
             }.flowWithLifecycleAndDatabaseChange(
                 viewLifecycleOwner.lifecycle,
                 Lifecycle.State.RESUMED,
@@ -190,6 +226,43 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
 
     override fun onCompatOptionsItemSelected(item: MenuItem) {
         super.onCompatOptionsItemSelected(item)
+        when (item.itemId) {
+            R.id.menu_sort_desc -> {
+                sortAscending = !sortAscending
+                item.isChecked = !sortAscending
+                upExploreData(searchView.query?.toString())
+            }
+
+            R.id.menu_sort_manual -> {
+                item.isChecked = true
+                sort = BookSourceSort.Default
+                upExploreData(searchView.query?.toString())
+            }
+
+            R.id.menu_sort_name -> {
+                item.isChecked = true
+                sort = BookSourceSort.Name
+                upExploreData(searchView.query?.toString())
+            }
+
+            R.id.menu_sort_url -> {
+                item.isChecked = true
+                sort = BookSourceSort.Url
+                upExploreData(searchView.query?.toString())
+            }
+
+            R.id.menu_sort_time -> {
+                item.isChecked = true
+                sort = BookSourceSort.Update
+                upExploreData(searchView.query?.toString())
+            }
+
+            R.id.menu_sort_respondTime -> {
+                item.isChecked = true
+                sort = BookSourceSort.Respond
+                upExploreData(searchView.query?.toString())
+            }
+        }
         if (item.groupId == R.id.menu_group_text) {
             searchView.setQuery("group:${item.title}", true)
         }

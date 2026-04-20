@@ -7,9 +7,11 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.lifecycle.lifecycleScope
+import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseActivity
 import io.legado.app.databinding.ActivityHttpDebugBinding
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.StrResponse
 import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.ui.widget.dialog.TextDialog
@@ -32,8 +34,33 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
     private var lastResponse: StrResponse? = null
     private var lastRequestSrc: String? = null
 
+    private val uaNames by lazy {
+        listOf(
+            getString(R.string.debug_ua_default),
+            getString(R.string.debug_ua_chrome_pc),
+            getString(R.string.debug_ua_chrome_mobile),
+            getString(R.string.debug_ua_safari_ios),
+            getString(R.string.debug_ua_firefox),
+            getString(R.string.debug_ua_custom)
+        )
+    }
+
+    private val uaValues by lazy {
+        listOf(
+            "",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${BuildConfig.Cronet_Main_Version} Safari/537.36",
+            "Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${BuildConfig.Cronet_Main_Version} Mobile Safari/537.36",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+            ""
+        )
+    }
+
+    private var customUa: String = ""
+
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         initSpinner()
+        initUaSpinner()
         initClick()
     }
 
@@ -108,6 +135,49 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         }
     }
 
+    private fun initUaSpinner() {
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, uaNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerUa.adapter = adapter
+        binding.spinnerUa.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (position == uaNames.size - 1) {
+                    showCustomUaDialog()
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun showCustomUaDialog() {
+        val dialogBinding = io.legado.app.databinding.DialogEditTextBinding.inflate(layoutInflater)
+        dialogBinding.editView.hint = getString(R.string.debug_user_agent)
+        dialogBinding.editView.setText(customUa.ifEmpty { AppConfig.userAgent })
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.debug_ua_custom)
+            .setView(dialogBinding.root)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                customUa = dialogBinding.editView.text?.toString()?.trim() ?: ""
+            }
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                binding.spinnerUa.setSelection(0)
+            }
+            .setOnCancelListener {
+                binding.spinnerUa.setSelection(0)
+            }
+            .show()
+    }
+
+    private fun getSelectedUa(): String {
+        val position = binding.spinnerUa.selectedItemPosition
+        return when {
+            position == 0 -> AppConfig.userAgent
+            position == uaValues.size - 1 -> customUa.ifEmpty { AppConfig.userAgent }
+            else -> uaValues[position]
+        }
+    }
+
     private fun initClick() {
         binding.btnSend.setOnClickListener {
             sendRequest()
@@ -158,6 +228,7 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
         val methodIndex = binding.spinnerMethod.selectedItemPosition
         val headersText = binding.etHeaders.text.toString()
         val bodyText = binding.etBody.text.toString()
+        val userAgent = getSelectedUa()
 
         return client.newCallStrResponse {
             url(url)
@@ -170,26 +241,33 @@ class HttpDebugActivity : BaseActivity<ActivityHttpDebugBinding>() {
                     }
                 }
             }
+            addHeader("User-Agent", userAgent)
             if (headersText.isNotEmpty()) {
                 parseHeaders(headersText).forEach { (key, value) ->
+                    if (key.equals("User-Agent", ignoreCase = true)) {
+                        return@forEach
+                    }
                     addHeader(key, value)
                 }
             }
         }.also { response ->
             lastResponse = response
-            lastRequestSrc = buildRequestSrc(url, methodIndex, headersText, bodyText)
+            lastRequestSrc = buildRequestSrc(url, methodIndex, headersText, bodyText, userAgent)
             invalidateOptionsMenu()
         }
     }
 
-    private fun buildRequestSrc(url: String, methodIndex: Int, headersText: String, bodyText: String): String {
+    private fun buildRequestSrc(url: String, methodIndex: Int, headersText: String, bodyText: String, userAgent: String): String {
         val sb = StringBuilder()
         sb.append("=== 请求行 ===\n")
         sb.append("${if (methodIndex == 0) "GET" else "POST"} $url\n\n")
         sb.append("=== 请求头 ===\n")
+        sb.append("User-Agent: $userAgent\n")
         if (headersText.isNotEmpty()) {
             headersText.lines().forEach { line ->
-                sb.append("$line\n")
+                if (line.split(":").firstOrNull()?.trim()?.equals("User-Agent", ignoreCase = true) != true) {
+                    sb.append("$line\n")
+                }
             }
         }
         if (methodIndex == 1 && bodyText.isNotEmpty()) {

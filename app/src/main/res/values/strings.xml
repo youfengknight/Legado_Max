@@ -1397,4 +1397,11 @@
     <string name="input_is_empty">输入不能为空</string>
     <string name="debug_request_src">请求体源码</string>
     <string name="debug_response_src">响应体源码</string>
+    <string name="debug_user_agent">User-Agent</string>
+    <string name="debug_ua_default">默认</string>
+    <string name="debug_ua_chrome_pc">Chrome PC</string>
+    <string name="debug_ua_chrome_mobile">Chrome Mobile</string>
+    <string name="debug_ua_safari_ios">Safari iOS</string>
+    <string name="debug_ua_firefox">Firefox</string>
+    <string name="debug_ua_custom">自定义</string>
 </resources>

@@ -3,6 +3,55 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_sort"
+        android:title="@string/sort"
+        android:icon="@drawable/ic_sort"
+        app:showAsAction="always">
+
+        <menu>
+
+            <item
+                android:id="@+id/menu_sort_desc"
+                android:checkable="true"
+                android:title="@string/sort_desc" />
+
+            <group
+                android:id="@+id/menu_group_sort"
+                android:checkableBehavior="single">
+
+                <item
+                    android:id="@+id/menu_sort_manual"
+                    android:checkable="true"
+                    android:checked="true"
+                    android:title="@string/sort_manual" />
+
+                <item
+                    android:id="@+id/menu_sort_name"
+                    android:checkable="true"
+                    android:title="@string/sort_by_name" />
+
+                <item
+                    android:id="@+id/menu_sort_url"
+                    android:checkable="true"
+                    android:title="@string/sort_by_url" />
+
+                <item
+                    android:id="@+id/menu_sort_time"
+                    android:checkable="true"
+                    android:title="@string/sort_by_lastUpdateTime" />
+
+                <item
+                    android:id="@+id/menu_sort_respondTime"
+                    android:checkable="true"
+                    android:title="@string/sort_by_respondTime" />
+
+            </group>
+
+        </menu>
+
+    </item>
+
+    <item
         android:id="@+id/menu_group"
         android:title="@string/group"
         android:icon="@drawable/ic_groups"
