@@ -20,7 +20,7 @@ class CookieViewerViewModel(application: Application) : BaseViewModel(applicatio
             val domain = NetworkUtils.getSubDomain(url)
             val httpCookie = CookieStore.getCookie(url)
             if (httpCookie.isNotBlank()) {
-                cookies.add("--- HTTP Cookie (来自CookieStore) ---")
+                // cookies.add("--- HTTP Cookie (来自CookieStore) ---")
                 httpCookie.splitNotBlank(";").forEach { cookie ->
                     val trimmed = cookie.trim()
                     if (trimmed.isNotEmpty()) {
@@ -33,7 +33,7 @@ class CookieViewerViewModel(application: Application) : BaseViewModel(applicatio
             val webViewCookie = webCookieManager.getCookie(url)
             if (webViewCookie.isNotBlank()) {
                 cookies.add("")
-                cookies.add("--- WebView Cookie (来自WebView) ---")
+                // cookies.add("--- WebView Cookie (来自WebView) ---")
                 webViewCookie.splitNotBlank(";").forEach { cookie ->
                     val trimmed = cookie.trim()
                     if (trimmed.isNotEmpty()) {

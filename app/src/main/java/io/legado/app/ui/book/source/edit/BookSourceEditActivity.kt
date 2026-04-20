@@ -39,6 +39,7 @@ import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.qrcode.QrCodeResult
 import io.legado.app.ui.widget.dialog.UrlOptionDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
+import io.legado.app.ui.widget.dialog.CookieViewerDialog
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager
 import io.legado.app.ui.widget.text.EditEntity
@@ -174,6 +175,7 @@ class BookSourceEditActivity :
             }
 
             R.id.menu_clear_cookie -> viewModel.clearCookie(getSource().bookSourceUrl)
+            R.id.menu_view_cookie -> showDialogFragment(CookieViewerDialog(getSource().bookSourceUrl))
             R.id.menu_auto_complete -> viewModel.autoComplete = !viewModel.autoComplete
             R.id.menu_copy_source -> sendToClip(GSON.toJson(getSource()))
             R.id.menu_paste_source -> viewModel.pasteSource { upSourceView(it) }

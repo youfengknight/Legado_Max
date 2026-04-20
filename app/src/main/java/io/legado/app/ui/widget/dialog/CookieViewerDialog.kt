@@ -7,10 +7,11 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.databinding.DialogRecyclerViewBinding
-import io.legado.app.databinding.ItemTextBinding
+import io.legado.app.databinding.ItemCookieBinding
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.toastOnUi
@@ -34,6 +35,7 @@ class CookieViewerDialog(private val url: String) : BaseDialogFragment(R.layout.
             toolBar.setTitle(R.string.view_cookie)
             toolBar.inflateMenu(R.menu.cookie_viewer)
             toolBar.setOnMenuItemClickListener(this@CookieViewerDialog)
+            recyclerView.layoutManager = LinearLayoutManager(requireContext())
             recyclerView.adapter = adapter
         }
         viewModel.loadCookies(url).observe(viewLifecycleOwner) { cookies ->
@@ -50,31 +52,29 @@ class CookieViewerDialog(private val url: String) : BaseDialogFragment(R.layout.
                 requireContext().toastOnUi(R.string.copy_complete)
             }
             R.id.menu_refresh -> {
-                viewModel.loadCookies(url).value?.let { cookies ->
-                    adapter.setItems(cookies)
-                }
+                viewModel.loadCookies(url)
             }
         }
         return true
     }
 
     inner class CookieAdapter(context: Context) :
-        io.legado.app.base.adapter.RecyclerAdapter<String, ItemTextBinding>(context) {
+        io.legado.app.base.adapter.RecyclerAdapter<String, ItemCookieBinding>(context) {
 
-        override fun getViewBinding(parent: ViewGroup): ItemTextBinding {
-            return ItemTextBinding.inflate(inflater, parent, false)
+        override fun getViewBinding(parent: ViewGroup): ItemCookieBinding {
+            return ItemCookieBinding.inflate(inflater, parent, false)
         }
 
         override fun convert(
             holder: io.legado.app.base.adapter.ItemViewHolder,
-            binding: ItemTextBinding,
+            binding: ItemCookieBinding,
             item: String,
             payloads: MutableList<Any>
         ) {
             binding.textView.text = item
         }
 
-        override fun registerListener(holder: io.legado.app.base.adapter.ItemViewHolder, binding: ItemTextBinding) {
+        override fun registerListener(holder: io.legado.app.base.adapter.ItemViewHolder, binding: ItemCookieBinding) {
         }
     }
 }
