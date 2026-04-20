@@ -5,12 +5,19 @@
   "compilerOptions": {
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@api": ["./src/api"],
       "@utils/*": ["./src/utils/*"]
-    }
+    },
+    "lib": ["ES2015", "DOM", "DOM.Iterable"],
+    "target": "ES2015",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true
   }
 }

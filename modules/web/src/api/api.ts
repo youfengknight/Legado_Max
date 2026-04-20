@@ -203,6 +203,27 @@ const getProxyImageUrl = (
   ).toString()
 }
 
+// 备份API
+export interface BackupItemInfo {
+  fileName: string
+  displayName: string
+  description: string
+  count: number
+  size: number
+}
+
+export interface BackupOverview {
+  fileName: string
+  totalSize: number
+  createTime: number
+  items: BackupItemInfo[]
+}
+
+const getBackupPreview = () =>
+  ajax.get<LeagdoApiResponse<BackupOverview>>('backupPreview')
+
+const getBackupUrl = () => `${legado_http_entry_point}backup`
+
 export default {
   getReadConfig,
   saveReadConfig,
@@ -223,4 +244,7 @@ export default {
 
   getProxyCoverUrl,
   getProxyImageUrl,
+
+  getBackupPreview,
+  getBackupUrl,
 }
