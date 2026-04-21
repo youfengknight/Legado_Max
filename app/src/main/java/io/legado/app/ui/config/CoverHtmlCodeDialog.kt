@@ -1,6 +1,7 @@
 package io.legado.app.ui.config
 
 import android.annotation.SuppressLint
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -63,16 +64,22 @@ class CoverHtmlCodeDialog : BaseDialogFragment(R.layout.dialog_cover_html_code) 
      */
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView() {
+        binding.webViewPreview.setBackgroundColor(Color.TRANSPARENT)
         binding.webViewPreview.settings.apply {
             javaScriptEnabled = true
             useWideViewPort = true
             loadWithOverviewMode = true
-            layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
             setSupportZoom(false)
             builtInZoomControls = false
             displayZoomControls = false
+            domStorageEnabled = true
+            defaultTextEncodingName = "UTF-8"
         }
-        binding.webViewPreview.webViewClient = WebViewClient()
+        binding.webViewPreview.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+            }
+        }
     }
 
     /**
@@ -96,11 +103,15 @@ class CoverHtmlCodeDialog : BaseDialogFragment(R.layout.dialog_cover_html_code) 
                 BookCover.getCoverHtmlCode()
             }
             binding.cbEnable.isChecked = config.enable
-            binding.codeView.setText(config.htmlCode.ifBlank {
+            val htmlCode = config.htmlCode.ifBlank {
                 DefaultData.coverHtmlTemplate
-            })
+            }
+            binding.codeView.setText(htmlCode)
             binding.editBookName.setText("示例书名")
             binding.editAuthor.setText("示例作者")
+            binding.webViewPreview.post {
+                previewCover()
+            }
         }
     }
 
@@ -145,7 +156,7 @@ class CoverHtmlCodeDialog : BaseDialogFragment(R.layout.dialog_cover_html_code) 
 
         val renderedHtml = renderHtml(htmlTemplate, bookName, author)
         binding.webViewPreview.loadDataWithBaseURL(
-            null,
+            "about:blank",
             renderedHtml,
             "text/html",
             "UTF-8",

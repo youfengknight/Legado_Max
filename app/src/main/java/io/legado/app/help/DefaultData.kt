@@ -98,7 +98,7 @@ object DefaultData {
      * 默认HTML封面模板
      * 
      * 用于生成自定义封面图片的HTML模板，特点：
-     * - 尺寸：600x900像素（标准封面比例）
+     * - 自适应尺寸：100%宽高，适配预览区域
      * - 渐变背景：紫色系渐变
      * - 居中布局：书名和作者垂直居中
      * - 支持变量：{{bookName}}（书名）、{{author}}（作者）
@@ -111,16 +111,18 @@ object DefaultData {
         <html>
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=600, height=900">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
                 * {
                     margin: 0;
                     padding: 0;
                     box-sizing: border-box;
                 }
+                html, body {
+                    width: 100%;
+                    height: 100%;
+                }
                 body {
-                    width: 600px;
-                    height: 900px;
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
@@ -131,20 +133,20 @@ object DefaultData {
                     overflow: hidden;
                 }
                 .container {
-                    padding: 40px;
+                    padding: 20px;
                     text-align: center;
                     width: 100%;
                 }
                 .title {
-                    font-size: 42px;
+                    font-size: 24px;
                     font-weight: bold;
                     line-height: 1.3;
-                    margin-bottom: 30px;
+                    margin-bottom: 15px;
                     word-break: break-word;
-                    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
                 }
                 .author {
-                    font-size: 24px;
+                    font-size: 14px;
                     opacity: 0.9;
                     font-weight: 300;
                 }
