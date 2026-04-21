@@ -710,6 +710,10 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         container.visible()
     }
 
+    /**
+     * 绑定 WebView 显示 useweb 内容
+     * 处理流程：解析HTML -> 构建注入JS -> 获取WebView -> 设置监听 -> 加载内容
+     */
     private fun bindExploreWebView(
         container: FrameLayout,
         content: String,
@@ -759,18 +763,34 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         container.visible()
     }
 
+    /**
+     * 释放 WebView 资源
+     * 移除 JavaScript 接口并将 WebView 归还到池中
+     */
     private fun releaseWebView(container: FrameLayout) {
-        activeWebViews.remove(container)?.let {
+        activeWebViews.remove(container)?.let { pooledWebView ->
+            // 移除 JavaScript 接口，避免 WebView 复用时接口重复添加
+            pooledWebView.realWebView.apply {
+                removeJavascriptInterface(nameCache)
+                removeJavascriptInterface(nameSource)
+                removeJavascriptInterface(nameJava)
+            }
             WebViewPool.release(it)
         }
     }
 
+    /**
+     * 构建高度缓存的唯一标识 Key
+     * 使用书源URL哈希、HTML哈希和HTML长度组合，降低哈希冲突概率
+     */
     private fun buildExploreUseWebPageKey(source: BookSource?, html: String): String {
         return buildString {
             append("useweb_page_")
-            append(source?.bookSourceUrl ?: "default")
+            append(source?.bookSourceUrl?.hashCode() ?: "default")
             append('_')
             append(html.hashCode())
+            append('_')
+            append(html.length) // 添加长度进一步降低冲突概率
         }
     }
 

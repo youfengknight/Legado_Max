@@ -107,6 +107,8 @@ object WebViewPool {
             stopLoading()
             clearFocus() //清除焦点
             setOnLongClickListener(null)
+            // 清除触摸监听器，避免内存泄漏和错误回调
+            setOnTouchListener(null)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 setOnScrollChangeListener(null)
             }
@@ -155,6 +157,10 @@ object WebViewPool {
         }
     }
 
+    /**
+     * 准备内联内容 WebView
+     * 初始化高度测量代次，设置背景色和滚动属性，重置布局参数
+     */
     fun prepareForInlineContent(webView: WebView) {
         nextInlineContentGeneration(webView)
         webView.setBackgroundColor(webView.context.backgroundColor)
@@ -178,6 +184,12 @@ object WebViewPool {
         fitInlineContent(webView, currentInlineContentGeneration(webView), afterLayout)
     }
 
+    /**
+     * 调整 WebView 高度以适应内容
+     * 通过 JavaScript 获取内容实际高度并更新布局参数
+     * @param generation 代次标识，用于防止过期的回调执行
+     * @param afterLayout 高度调整完成后的回调
+     */
     fun fitInlineContent(
         webView: WebView,
         generation: Long,
@@ -212,6 +224,11 @@ object WebViewPool {
         }
     }
 
+    /**
+     * 调度多次高度测量
+     * 由于 WebView 内容加载时机不确定，需要多次延迟测量以确保高度准确
+     * @param delays 延迟时间数组，默认 [0, 80, 240, 600, 1200] 毫秒
+     */
     fun scheduleInlineContentFit(
         webView: WebView,
         afterLayout: (() -> Unit)? = null,
@@ -220,11 +237,17 @@ object WebViewPool {
         val generation = currentInlineContentGeneration(webView)
         delays.forEach { delayMillis ->
             webView.postDelayed({
+                // 安全检查：WebView 已销毁或未附加到窗口时跳过
+                if (webView.handler == null || !webView.isAttachedToWindow) return@postDelayed
                 fitInlineContent(webView, generation, afterLayout)
             }, delayMillis)
         }
     }
 
+    /**
+     * 安装触摸事件监听器，在用户触摸后重新测量高度
+     * 用于处理动态加载内容（如图片懒加载）导致的高度变化
+     */
     fun installInlineContentRefitOnTouch(
         webView: WebView,
         afterLayout: (() -> Unit)? = null
