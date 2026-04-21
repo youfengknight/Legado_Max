@@ -96,6 +96,10 @@
     <string name="retry">Retry</string>
     <string name="web_service">Web service</string>
     <string name="web_service_desc">Web edit source and read book</string>
+    <string name="web_service_auth_title">Web Service Auth</string>
+    <string name="web_service_auth_summary">Require token for API access. Recommended to enable on public networks</string>
+    <string name="web_service_token_title">Web Service Token</string>
+    <string name="web_service_token_summary">Set the token for web service authentication</string>
     <string name="web_edit_source">Edit book sources on the web</string>
     <string name="offline_cache">Offline cache</string>
     <string name="offline_cache_t">Offline cache</string>
@@ -1100,10 +1104,6 @@
     <string name="webdav_device_name">Device name</string>
     <string name="web_service_wake_lock">WebService Wake up Lock</string>
     <string name="web_service_wake_lock_summary">The wake-up lock is enabled when the web service is enabled, and some phones will be killed when the wake-up lock is enabled.</string>
-    <string name="web_service_auth_title">Web Service Authentication</string>
-    <string name="web_service_auth_summary">Require token authentication for Web service API access, enabled by default for security</string>
-    <string name="web_service_token_title">Web Service Token</string>
-    <string name="web_service_token_summary">Token used for API authentication, defaults to device ID if not set</string>
     <string name="unsafe_ssl_title">Skip SSL Verification</string>
     <string name="unsafe_ssl_summary">Skip SSL certificate verification for all network requests, may expose to man-in-the-middle attacks. Only enable if a site has certificate issues</string>
     <string name="need_restart_app">This change requires restarting the app to take effect. Restart now?</string>

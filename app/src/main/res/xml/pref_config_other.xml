@@ -113,7 +113,7 @@
             android:title="@string/web_service_wake_lock" />
 
         <io.legado.app.lib.prefs.SwitchPreference
-            android:defaultValue="true"
+            android:defaultValue="false"
             android:key="webServiceAuthEnabled"
             android:summary="@string/web_service_auth_summary"
             android:title="@string/web_service_auth_title" />

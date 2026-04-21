@@ -133,30 +133,53 @@ object DefaultData {
                     overflow: hidden;
                 }
                 .container {
-                    padding: 20px;
+                    padding: 24px;
                     text-align: center;
                     width: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
                 }
                 .title {
-                    font-size: 24px;
+                    font-size: 36px;
                     font-weight: bold;
                     line-height: 1.3;
-                    margin-bottom: 15px;
+                    margin-bottom: 16px;
                     word-break: break-word;
                     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+                    max-width: 100%;
                 }
                 .author {
-                    font-size: 14px;
+                    font-size: 18px;
                     opacity: 0.9;
                     font-weight: 300;
+                    max-width: 100%;
                 }
             </style>
         </head>
         <body>
             <div class="container">
-                <div class="title">{{bookName}}</div>
-                <div class="author">{{author}}</div>
+                <div class="title" id="title">{{bookName}}</div>
+                <div class="author" id="author">{{author}}</div>
             </div>
+            <script>
+                function fitText(el, maxSize, minSize) {
+                    var size = maxSize;
+                    el.style.fontSize = size + 'px';
+                    while (size > minSize) {
+                        if (el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight * 1.5) {
+                            break;
+                        }
+                        size--;
+                        el.style.fontSize = size + 'px';
+                    }
+                }
+                var title = document.getElementById('title');
+                var author = document.getElementById('author');
+                fitText(title, 36, 14);
+                fitText(author, 18, 10);
+            </script>
         </body>
         </html>
         """.trimIndent()

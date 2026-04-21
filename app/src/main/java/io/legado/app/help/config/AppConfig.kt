@@ -460,7 +460,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var webServiceAuthEnabled: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.webServiceAuthEnabled, true)
+        get() = appCtx.getPrefBoolean(PreferKey.webServiceAuthEnabled, false)
         set(value) {
             appCtx.putPrefBoolean(PreferKey.webServiceAuthEnabled, value)
         }

@@ -95,6 +95,10 @@
     <string name="retry">重试</string>
     <string name="web_service">Web 服务</string>
     <string name="web_service_desc">用浏览器写源或看书</string>
+    <string name="web_service_auth_title">Web服务认证</string>
+    <string name="web_service_auth_summary">要求API请求携带Token认证，在公共网络下建议开启</string>
+    <string name="web_service_token_title">Web服务Token</string>
+    <string name="web_service_token_summary">设置Web服务认证令牌</string>
     <string name="web_edit_source">Web 编辑书源</string>
     <string name="offline_cache">离线缓存</string>
     <string name="offline_cache_t">离线缓存</string>
@@ -1089,10 +1093,6 @@
     <string name="webdav_device_name">设备名称</string>
     <string name="web_service_wake_lock">WebService唤醒锁</string>
     <string name="web_service_wake_lock_summary">开启web服务的时候启用唤醒锁,有些手机开启唤醒锁会被杀后台</string>
-    <string name="web_service_auth_title">Web服务认证</string>
-    <string name="web_service_auth_summary">要求API请求携带Token认证，默认开启以保护安全</string>
-    <string name="web_service_token_title">Web服务Token</string>
-    <string name="web_service_token_summary">API认证令牌，未设置时默认使用设备ID</string>
     <string name="unsafe_ssl_title">跳过SSL验证</string>
     <string name="unsafe_ssl_summary">跳过所有网络请求的SSL证书验证，可能遭受中间人攻击，仅在网站证书异常时开启</string>
     <string name="need_restart_app">此更改需要重启应用才能生效，是否立即重启？</string>

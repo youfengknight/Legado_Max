@@ -35,6 +35,7 @@ val cookieJar by lazy {
 
         override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
             if (cookies.isEmpty()) return
+            //临时保存 书源启用cookie选项再添加到数据库
             val cookieBuilder = StringBuilder()
             cookies.forEachIndexed { index, cookie ->
                 if (index > 0) cookieBuilder.append(";")

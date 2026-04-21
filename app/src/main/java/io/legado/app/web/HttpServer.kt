@@ -24,6 +24,20 @@ import java.io.ByteArrayOutputStream
 class HttpServer(port: Int) : NanoHTTPD(port) {
     private val assetsWeb = AssetsWeb("web")
 
+    private val apiPaths = setOf(
+        "/getBookSource", "/getBookSources",
+        "/getBookshelf", "/getChapterList", "/refreshToc", "/getBookContent",
+        "/cover", "/image", "/getReadConfig",
+        "/getRssSource", "/getRssSources",
+        "/getReplaceRules", "/backupPreview", "/backup",
+        "/saveBookSource", "/saveBookSources", "/deleteBookSources",
+        "/saveBook", "/deleteBook", "/saveBookProgress", "/addLocalBook", "/saveReadConfig",
+        "/saveRssSource", "/saveRssSources", "/deleteRssSources",
+        "/saveReplaceRule", "/deleteReplaceRule", "/testReplaceRule"
+    )
+
+    private fun isApiRequest(uri: String): Boolean = uri in apiPaths
+
     private fun checkAuth(session: IHTTPSession): Response? {
         if (!AppConfig.webServiceAuthEnabled) return null
         val token = session.parameters["token"]?.firstOrNull()
@@ -65,8 +79,10 @@ class HttpServer(port: Int) : NanoHTTPD(port) {
                 }
 
                 Method.POST -> {
-                    val authResponse = checkAuth(session)
-                    if (authResponse != null) return authResponse
+                    if (isApiRequest(uri)) {
+                        val authResponse = checkAuth(session)
+                        if (authResponse != null) return authResponse
+                    }
 
                     val files = HashMap<String, String>()
                     session.parseBody(files)
@@ -94,8 +110,10 @@ class HttpServer(port: Int) : NanoHTTPD(port) {
                 }
 
                 Method.GET -> {
-                    val authResponse = checkAuth(session)
-                    if (authResponse != null) return authResponse
+                    if (isApiRequest(uri)) {
+                        val authResponse = checkAuth(session)
+                        if (authResponse != null) return authResponse
+                    }
 
                     val parameters = session.parameters
 

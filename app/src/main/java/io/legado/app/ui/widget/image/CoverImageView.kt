@@ -462,6 +462,9 @@ class CoverImageView @JvmOverloads constructor(
      * 创建临时WebView渲染HTML内容，等待页面加载完成后截图。
      * 使用applicationContext避免Activity泄漏，每次用完即销毁。
      * 设置超时保护（最多等待2.5秒），超时返回null使用默认封面。
+     * 
+     * 注意：onPageFinished仅表示HTML解析完成，CSS布局和绘制尚未完成，
+     * 需要额外等待渲染完成后才能截图，否则会得到白色图片。
      */
     @SuppressLint("SetJavaScriptEnabled")
     private suspend fun generateHtmlCoverBitmap(html: String, width: Int, height: Int): Bitmap? {
@@ -473,39 +476,55 @@ class CoverImageView @JvmOverloads constructor(
                 wv.settings.useWideViewPort = true
                 wv.settings.loadWithOverviewMode = true
 
-                var resultBitmap: Bitmap? = null
-                var isComplete = false
+                val captureWidth = width
+                val captureHeight = height
+
+                wv.measure(
+                    View.MeasureSpec.makeMeasureSpec(captureWidth, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(captureHeight, View.MeasureSpec.EXACTLY)
+                )
+                wv.layout(0, 0, captureWidth, captureHeight)
+
+                var renderComplete = false
 
                 wv.webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        if (isComplete) return
-                        isComplete = true
-                        try {
-                            wv?.measure(
-                                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-                                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
-                            )
-                            wv?.layout(0, 0, width, height)
-                            val bitmap = createBitmap(width, height)
-                            val canvas = Canvas(bitmap)
-                            wv?.draw(canvas)
-                            resultBitmap = bitmap
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
+                        view?.postDelayed({
+                            if (renderComplete) return@postDelayed
+                            renderComplete = true
+                        }, 300)
                     }
                 }
 
                 wv.loadDataWithBaseURL("about:blank", html, "text/html", "UTF-8", null)
 
                 var attempts = 0
-                while (resultBitmap == null && attempts < 50) {
+                while (!renderComplete && attempts < 40) {
                     delay(50)
                     attempts++
                 }
 
-                resultBitmap
+                if (!renderComplete) {
+                    renderComplete = true
+                }
+
+                val bitmap = try {
+                    wv.measure(
+                        View.MeasureSpec.makeMeasureSpec(captureWidth, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(captureHeight, View.MeasureSpec.EXACTLY)
+                    )
+                    wv.layout(0, 0, captureWidth, captureHeight)
+                    val bmp = createBitmap(captureWidth, captureHeight)
+                    val canvas = Canvas(bmp)
+                    wv.draw(canvas)
+                    bmp
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+
+                bitmap
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
