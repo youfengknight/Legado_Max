@@ -399,6 +399,9 @@ class CoverImageView @JvmOverloads constructor(
      * 2. 查询缓存，命中则直接使用
      * 3. 获取当前选中模板，替换变量后通过WebView渲染生成Bitmap
      * 4. 缓存结果并显示
+     * 
+     * 渲染使用固定尺寸600x900，不依赖CoverImageView的实际像素大小，
+     * 避免小尺寸下CSS视口过小导致文字溢出或偏移
      */
     @SuppressLint("SetJavaScriptEnabled")
     private fun loadHtmlCover(bookName: String, author: String?, onLoadFinish: (() -> Unit)?) {
@@ -418,7 +421,7 @@ class CoverImageView @JvmOverloads constructor(
                     return@launch
                 }
 
-                val cacheKey = "$bookName-$author-${width}x$height"
+                val cacheKey = "$bookName-$author"
                 val cachedBitmap = htmlCoverCache[cacheKey]
                 if (cachedBitmap != null) {
                     setImageDrawable(cachedBitmap.toDrawable(resources))
@@ -435,10 +438,8 @@ class CoverImageView @JvmOverloads constructor(
                 }
 
                 val renderedHtml = BookCover.renderHtmlTemplate(htmlCode, bookName, author ?: "")
-                val captureWidth = width
-                val captureHeight = height
 
-                val bitmap = generateHtmlCoverBitmap(renderedHtml, captureWidth, captureHeight)
+                val bitmap = generateHtmlCoverBitmap(renderedHtml)
 
                 if (bitmap != null) {
                     htmlCoverCache.put(cacheKey, bitmap)
@@ -459,15 +460,15 @@ class CoverImageView @JvmOverloads constructor(
     /**
      * 使用WebView生成HTML封面Bitmap
      * 
-     * 创建临时WebView渲染HTML内容，等待页面加载完成后截图。
+     * 使用固定尺寸600x900渲染，确保CSS视口足够大，
+     * 文字和布局在不同设备上表现一致。
      * 使用applicationContext避免Activity泄漏，每次用完即销毁。
      * 设置超时保护（最多等待2.5秒），超时返回null使用默认封面。
-     * 
-     * 注意：onPageFinished仅表示HTML解析完成，CSS布局和绘制尚未完成，
-     * 需要额外等待渲染完成后才能截图，否则会得到白色图片。
      */
     @SuppressLint("SetJavaScriptEnabled")
-    private suspend fun generateHtmlCoverBitmap(html: String, width: Int, height: Int): Bitmap? {
+    private suspend fun generateHtmlCoverBitmap(html: String): Bitmap? {
+        val renderWidth = 600
+        val renderHeight = 900
         return withContext(Dispatchers.Main) {
             var wv: WebView? = null
             try {
@@ -477,14 +478,11 @@ class CoverImageView @JvmOverloads constructor(
                 wv.settings.loadWithOverviewMode = false
                 wv.setInitialScale(100)
 
-                val captureWidth = width
-                val captureHeight = height
-
                 wv.measure(
-                    View.MeasureSpec.makeMeasureSpec(captureWidth, View.MeasureSpec.EXACTLY),
-                    View.MeasureSpec.makeMeasureSpec(captureHeight, View.MeasureSpec.EXACTLY)
+                    View.MeasureSpec.makeMeasureSpec(renderWidth, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(renderHeight, View.MeasureSpec.EXACTLY)
                 )
-                wv.layout(0, 0, captureWidth, captureHeight)
+                wv.layout(0, 0, renderWidth, renderHeight)
 
                 var renderComplete = false
 
@@ -512,11 +510,11 @@ class CoverImageView @JvmOverloads constructor(
 
                 val bitmap = try {
                     wv.measure(
-                        View.MeasureSpec.makeMeasureSpec(captureWidth, View.MeasureSpec.EXACTLY),
-                        View.MeasureSpec.makeMeasureSpec(captureHeight, View.MeasureSpec.EXACTLY)
+                        View.MeasureSpec.makeMeasureSpec(renderWidth, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(renderHeight, View.MeasureSpec.EXACTLY)
                     )
-                    wv.layout(0, 0, captureWidth, captureHeight)
-                    val bmp = createBitmap(captureWidth, captureHeight)
+                    wv.layout(0, 0, renderWidth, renderHeight)
+                    val bmp = createBitmap(renderWidth, renderHeight)
                     val canvas = Canvas(bmp)
                     wv.draw(canvas)
                     bmp
