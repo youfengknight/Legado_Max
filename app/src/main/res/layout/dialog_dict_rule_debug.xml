@@ -77,6 +77,7 @@
             android:padding="12dp"
             android:scrollbarStyle="outsideOverlay"
             android:textColor="@color/secondaryText"
+            android:textSize="16sp"
             android:textIsSelectable="true"
             android:hint="调试结果将显示在这里"
             tools:ignore="SpeakableTextPresentCheck" />

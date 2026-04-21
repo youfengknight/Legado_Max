@@ -161,10 +161,6 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
             } else {
                 DictDebugConfig.addSearchHistory(word)
                 dialogBinding.viewResult.text = "正在搜索..."
-                dialog?.window?.setLayout(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
                 viewModel.debugSearch(dictRule, word) { result, urlResponse ->
                     urlSrc = urlResponse
                     resultSrc = result
@@ -220,6 +216,13 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
                 performSearch()
             }
             cancelButton()
+        }.apply {
+            setOnShowListener {
+                dialog?.window?.setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
         }
     }
 
