@@ -133,7 +133,8 @@ object BackupInfoHelper {
         // 直链上传配置
         DirectLinkUpload.getConfig()?.let {
             val fileName = DirectLinkUpload.ruleFileName
-            val size = it.length.toLong()
+            val json = io.legado.app.utils.GSON.toJson(it)
+            val size = json.length.toLong()
             totalSize += size
             items.add(BackupFileInfo(fileName, "直链上传配置", size))
         }
