@@ -236,6 +236,7 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     override fun onResume() {
         super.onResume()
         adapter.upResumed(true)
+        adapter.onResume()
         adapter.refreshExpandedItem()
     }
 
@@ -244,6 +245,11 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         searchView.clearFocus()
         adapter.onPause()
         super.onPause()
+    }
+
+    override fun onDestroyView() {
+        adapter.onDestroy()
+        super.onDestroyView()
     }
 
     private fun upGroupsMenu() = groupsMenu?.transaction { subMenu ->

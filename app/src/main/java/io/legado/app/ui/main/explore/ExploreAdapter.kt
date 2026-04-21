@@ -957,9 +957,15 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         }
     }
 
+    /**
+     * 页面暂停时调用
+     * 只暂停 WebView 而不释放，保持数据状态以便快速恢复
+     */
     fun onPause() {
-        sourceKinds.clear()
-        activeWebViews.keys.toList().forEach(::releaseWebView)
+        // 暂停所有活跃的 WebView，但不释放它们
+        activeWebViews.values.forEach { pooledWebView ->
+            pooledWebView.realWebView.onPause()
+        }
         saveInfoMapJob?.cancel()
         saveInfoMapJob = callBack.scope.launch {
             exploreInfoMapList.snapshot().filter { (_, infoMap) -> infoMap.needSave }.map { (_, infoMap) ->
@@ -968,6 +974,27 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                 }
             }.joinAll()
         }
+    }
+
+    /**
+     * 页面恢复时调用
+     * 恢复所有暂停的 WebView
+     */
+    fun onResume() {
+        // 恢复所有暂停的 WebView
+        activeWebViews.values.forEach { pooledWebView ->
+            pooledWebView.realWebView.onResume()
+        }
+    }
+
+    /**
+     * 页面销毁时调用
+     * 释放所有 WebView 和清除缓存数据
+     */
+    fun onDestroy() {
+        sourceKinds.clear()
+        activeWebViews.keys.toList().forEach(::releaseWebView)
+        saveInfoMapJob?.cancel()
     }
 
     private fun refreshExplore(source: BookSourcePart, binding: ItemFindBookBinding) {
