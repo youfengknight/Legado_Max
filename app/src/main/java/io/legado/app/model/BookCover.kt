@@ -40,20 +40,32 @@ import splitties.init.appCtx
 import java.io.File
 import androidx.core.graphics.drawable.toDrawable
 
+/**
+ * 书籍封面管理类
+ * 
+ * 负责封面的加载、显示、搜索等功能：
+ * - 默认封面管理（支持日间/夜间主题）
+ * - 封面图片加载（使用 Glide）
+ * - 漫画图片加载
+ * - 模糊封面加载
+ * - 封面规则配置与自动搜索
+ */
 @Keep
 @Suppress("ConstPropertyName")
 object BookCover {
 
     private const val coverRuleConfigKey = "legadoCoverRuleConfig"
+
     const val configFileName = "coverRule.json"
 
     var drawBookName = true
         private set
+
     var drawBookAuthor = true
         private set
+
     lateinit var defaultDrawable: Drawable
         private set
-
 
     init {
         upDefaultCover()
@@ -61,6 +73,9 @@ object BookCover {
 
     /**
      * 更新默认封面
+     * 
+     * 根据当前主题（日间/夜间）加载对应的默认封面图片，
+     * 并更新是否在封面上绘制书名和作者的设置
      */
     @SuppressLint("UseCompatLoadingForDrawables")
     fun upDefaultCover() {
@@ -81,7 +96,14 @@ object BookCover {
     }
 
     /**
-     * 加载封面
+     * 加载书籍封面
+     * 
+     * @param context 上下文
+     * @param path 封面图片路径或URL
+     * @param loadOnlyWifi 是否仅在WiFi下加载
+     * @param sourceOrigin 书源来源标识
+     * @param onLoadFinish 加载完成回调（成功或失败都会触发）
+     * @return Glide请求构建器
      */
     fun load(
         context: Context,
@@ -131,6 +153,18 @@ object BookCover {
 
     /**
      * 加载漫画图片
+     * 
+     * 与普通封面加载不同，漫画图片：
+     * - 宽度适配屏幕，高度保持原始比例
+     * - 启用磁盘缓存
+     * - 跳过内存缓存以节省空间
+     * 
+     * @param context 上下文
+     * @param path 图片路径或URL
+     * @param loadOnlyWifi 是否仅在WiFi下加载
+     * @param sourceOrigin 源来源标识
+     * @param transformation 图片变换（如缩放、裁剪等）
+     * @return Glide请求构建器
      */
     fun loadManga(
         context: Context,
@@ -159,11 +193,15 @@ object BookCover {
 
     /**
      * 预加载漫画图片
+     * 
+     * 将漫画图片下载到磁盘缓存，不进行解码显示，
+     * 用于提前加载后续页面以提升阅读体验
+     * 
      * @param context 上下文
-     * @param path 图片路径
+     * @param path 图片路径或URL
      * @param loadOnlyWifi 是否仅在WiFi下加载
-     * @param sourceOrigin 源来源
-     * @return 请求构建器
+     * @param sourceOrigin 源来源标识
+     * @return Glide请求构建器，返回缓存文件
      */
     fun preloadManga(
         context: Context,
@@ -184,6 +222,15 @@ object BookCover {
 
     /**
      * 加载模糊封面
+     * 
+     * 用于书籍详情页背景等场景，对封面进行高斯模糊处理，
+     * 并带有1.5秒的淡入动画效果
+     * 
+     * @param context 上下文
+     * @param path 封面图片路径或URL
+     * @param loadOnlyWifi 是否仅在WiFi下加载
+     * @param sourceOrigin 源来源标识
+     * @return Glide请求构建器
      */
     fun loadBlur(
         context: Context,
@@ -209,7 +256,7 @@ object BookCover {
 
     /**
      * 获取封面规则
-     * @return 封面规则
+     * @return 封面规则，若未配置则返回默认规则
      */
     fun getCoverRule(): CoverRule {
         return getConfig() ?: DefaultData.coverRule
@@ -217,7 +264,7 @@ object BookCover {
 
     /**
      * 获取配置
-     * @return 封面规则配置
+     * @return 封面规则配置，若不存在则返回null
      */
     fun getConfig(): CoverRule? {
         return GSON.fromJsonObject<CoverRule>(CacheManager.get(coverRuleConfigKey))
@@ -226,8 +273,11 @@ object BookCover {
 
     /**
      * 搜索封面
-     * @param book 书籍
-     * @return 封面URL
+     * 
+     * 根据配置的封面规则，通过书名在网络搜索并提取封面URL
+     * 
+     * @param book 书籍信息
+     * @return 封面URL，若搜索失败或规则未启用则返回null
      */
     suspend fun searchCover(book: Book): String? {
         val config = getCoverRule()
@@ -251,7 +301,7 @@ object BookCover {
 
     /**
      * 保存封面规则
-     * @param config 封面规则配置
+     * @param config 封面规则配置对象
      */
     fun saveCoverRule(config: CoverRule) {
         val json = GSON.toJson(config)
@@ -273,6 +323,22 @@ object BookCover {
         CacheManager.delete(coverRuleConfigKey)
     }
 
+    /**
+     * 封面规则配置类
+     * 
+     * 用于定义自动搜索封面的规则，实现 BaseSource 接口
+     * 以复用书源的规则解析能力
+     * 
+     * @property enable 是否启用此规则
+     * @property searchUrl 搜索URL模板，支持书名变量
+     * @property coverRule 从搜索结果页面提取封面URL的规则
+     * @property concurrentRate 并发限制
+     * @property loginUrl 登录地址
+     * @property loginUi 登录界面配置
+     * @property header 请求头配置
+     * @property jsLib JS库
+     * @property enabledCookieJar 是否启用Cookie管理
+     */
     @Keep
     data class CoverRule(
         var enable: Boolean = true,

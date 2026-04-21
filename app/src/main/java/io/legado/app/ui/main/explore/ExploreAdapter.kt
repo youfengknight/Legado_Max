@@ -114,6 +114,18 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         return ItemFindBookBinding.inflate(inflater, parent, false)
     }
 
+    /**
+     * 绑定数据到视图
+     * 使用 payload 机制区分不同的刷新场景，避免不必要的 WebView 重建
+     * 
+     * @param holder 视图持有者
+     * @param binding 视图绑定对象
+     * @param item 书源数据
+     * @param payloads 刷新载荷，用于区分刷新类型：
+     *   - 空：完整刷新
+     *   - "resume"：页面恢复，保持现有内容
+     *   - "force_refresh"：强制刷新，重新创建内容
+     */
     override fun convert(
         holder: ItemViewHolder,
         binding: ItemFindBookBinding,
@@ -121,36 +133,45 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         payloads: MutableList<Any>
     ) {
         binding.run {
+            // 设置最后一项的底部内边距
             if (holder.layoutPosition == itemCount - 1) {
                 root.setPadding(16.dpToPx(), 12.dpToPx(), 16.dpToPx(), 12.dpToPx())
             } else {
                 root.setPadding(16.dpToPx(), 12.dpToPx(), 16.dpToPx(), 0)
             }
+            // 只在完整刷新时更新书源名称
             if (payloads.isEmpty()) {
                 tvName.text = item.bookSourceName
             }
-            // 处理 payload：如果是 "resume" 则只恢复状态，不重新创建内容
-            val isResume = payloads.contains("resume")
-            val isForceRefresh = payloads.contains("force_refresh")
+            
+            // 解析 payload 类型，区分不同的刷新场景
+            val isResume = payloads.contains("resume")           // 页面恢复
+            val isForceRefresh = payloads.contains("force_refresh")  // 强制刷新
             
             if (isForceRefresh) {
-                // 强制刷新：清除标记以触发重新创建
+                // 强制刷新时清除 sourceUrl 标记，触发重新创建内容
                 flexbox.setTag(R.id.explore_source_url, null)
             }
             
             if (expandedSourceUrl == item.bookSourceUrl) {
+                // 当前项已展开
                 ivStatus.setImageResource(R.drawable.ic_arrow_down)
                 rotateLoading.loadingColor = context.accentColor
-                // 如果是 resume 且已有内容，跳过重新加载
+                
+                // 如果是页面恢复且内容已存在，直接返回避免重建
                 if (isResume && flexbox.childCount > 0) {
                     rotateLoading.gone()
                     return
                 }
+                
+                // 显示加载动画
                 rotateLoading.visible()
                 Coroutine.async(callBack.scope) {
+                    // 优先使用缓存的 kinds 数据
                     sourceKinds[item.bookSourceUrl]?.also {
                         return@async it
                     }
+                    // 缓存不存在时重新获取
                     item.exploreKinds().also {
                         sourceKinds[item.bookSourceUrl] = it
                     }
@@ -158,6 +179,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                     upKindList(this@run, item, kindList, item)
                 }.onFinally {
                     rotateLoading.gone()
+                    // 处理滚动到指定位置
                     scrollToSourceUrl?.let { sourceUrl ->
                         findSourcePosition(sourceUrl)?.let(callBack::scrollTo)
                         if (sourceUrl == item.bookSourceUrl) {
@@ -165,15 +187,29 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                         }
                     }
                 }
-            } else kotlin.runCatching {
-                ivStatus.setImageResource(R.drawable.ic_arrow_right)
-                rotateLoading.gone()
-                recyclerFlexbox(flexbox)
-                flexbox.gone()
+            } else {
+                // 当前项已折叠，回收 flexbox 中的视图
+                kotlin.runCatching {
+                    ivStatus.setImageResource(R.drawable.ic_arrow_right)
+                    rotateLoading.gone()
+                    recyclerFlexbox(flexbox)
+                    flexbox.gone()
+                }
             }
         }
     }
 
+    /**
+     * 更新发现分类列表
+     * 根据分类类型创建对应的视图，并绑定到 flexbox 布局中
+     * 
+     * 关键优化：通过 sourceUrl 标记避免重复创建 WebView
+     * 
+     * @param binding 视图绑定对象
+     * @param item 书源数据
+     * @param kinds 分类列表
+     * @param expandedItem 当前展开的书源项
+     */
     @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
     private fun upKindList(binding: ItemFindBookBinding, item: BookSourcePart, kinds: List<ExploreKind>, expandedItem: BookSourcePart) {
         if (kinds.isEmpty()) {
@@ -181,15 +217,19 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         }
         val flexbox = binding.flexbox
         val sourceUrl = item.bookSourceUrl
+        
         // 检查是否已经有内容且 sourceUrl 匹配，避免重复创建 WebView
+        // 这是防止页面切换时 WebView 闪烁的关键检查
         val existingSourceUrl = flexbox.getTag(R.id.explore_source_url) as? String
         if (existingSourceUrl == sourceUrl && flexbox.childCount > 0) {
             // 已经有相同 sourceUrl 的内容，跳过重新创建
             return
         }
+        
         kotlin.runCatching {
+            // 回收现有的 flexbox 子视图
             recyclerFlexbox(flexbox)
-            // 标记当前 flexbox 对应的 sourceUrl
+            // 标记当前 flexbox 对应的 sourceUrl，用于后续判断是否需要重建
             flexbox.setTag(R.id.explore_source_url, sourceUrl)
             flexbox.visible()
             val source by lazy { appDb.bookSourceDao.getBookSource(sourceUrl) }
@@ -893,9 +933,15 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         return "$inlineStyle\n<script>\n$safeInjection\n</script>\n$html"
     }
 
+    /**
+     * 回收 flexbox 中的子视图
+     * 将子视图分类回收到对应的回收池中，以便复用
+     * 
+     * 注意：此方法会释放 WebView 并清除 sourceUrl 标记
+     */
     @Synchronized
     private fun recyclerFlexbox(flexbox: FlexboxLayout) {
-        // 清除 sourceUrl 标记
+        // 清除 sourceUrl 标记，表示内容已被回收
         flexbox.setTag(R.id.explore_source_url, null)
         val children = flexbox.children.toList()
         if (children.isEmpty()) return
@@ -929,18 +975,26 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         }
     }
 
+    /**
+     * 注册列表项点击监听器
+     * 点击标题展开/折叠发现分类，长按显示菜单
+     */
     override fun registerListener(holder: ItemViewHolder, binding: ItemFindBookBinding) {
         binding.apply {
+            // 点击标题展开/折叠
             llTitle.setOnClickListener {
                 val position = holder.bindingAdapterPosition.takeIf { it >= 0 } ?: return@setOnClickListener
                 val item = getItem(position) ?: return@setOnClickListener
                 val oldExpandedSourceUrl = expandedSourceUrl
+                // 切换展开状态：如果当前项已展开则折叠，否则展开
                 expandedSourceUrl = if (oldExpandedSourceUrl == item.bookSourceUrl) null else item.bookSourceUrl
+                // 折叠旧的展开项
                 oldExpandedSourceUrl?.let { sourceUrl ->
                     findSourcePosition(sourceUrl)?.let {
                         notifyItemChanged(it, false)
                     }
                 }
+                // 展开新的项
                 expandedSourceUrl?.let { sourceUrl ->
                     scrollToSourceUrl = sourceUrl
                     findSourcePosition(sourceUrl)?.let {
@@ -949,6 +1003,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                     }
                 }
             }
+            // 长按显示菜单
             llTitle.onLongClick {
                 val position = holder.bindingAdapterPosition
                 if (position >= 0) {
@@ -960,6 +1015,10 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         }
     }
 
+    /**
+     * 压缩（折叠）所有展开的发现项
+     * @return 是否有项被折叠
+     */
     fun compressExplore(): Boolean {
         val sourceUrl = expandedSourceUrl
         return if (sourceUrl == null) {
@@ -975,7 +1034,10 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
 
     /**
      * 刷新展开的项目
+     * 
      * @param force 是否强制刷新（重新创建内容），默认 false
+     *   - true: 强制刷新，清除缓存并重新创建 WebView
+     *   - false: 普通恢复，保持现有内容不变
      */
     fun refreshExpandedItem(force: Boolean = false) {
         expandedSourceUrl?.let { sourceUrl ->
@@ -985,7 +1047,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                     // 注意：这里不直接操作，而是通过 payload 传递
                     notifyItemChanged(position, "force_refresh")
                 } else {
-                    // 普通刷新：只更新状态，不重新创建内容
+                    // 普通恢复：通过 payload 传递标记，保持现有内容
                     notifyItemChanged(position, "resume")
                 }
             }
