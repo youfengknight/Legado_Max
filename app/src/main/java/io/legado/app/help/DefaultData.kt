@@ -94,6 +94,72 @@ object DefaultData {
         GSON.fromJsonObject<BookCover.CoverRule>(json).getOrThrow()
     }
 
+    /**
+     * 默认HTML封面模板
+     * 
+     * 用于生成自定义封面图片的HTML模板，特点：
+     * - 尺寸：600x900像素（标准封面比例）
+     * - 渐变背景：紫色系渐变
+     * - 居中布局：书名和作者垂直居中
+     * - 支持变量：{{bookName}}（书名）、{{author}}（作者）
+     * 
+     * 用户可以自定义此模板来创建个性化封面样式
+     */
+    val coverHtmlTemplate: String by lazy {
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=600, height=900">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    width: 600px;
+                    height: 900px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    color: white;
+                    overflow: hidden;
+                }
+                .container {
+                    padding: 40px;
+                    text-align: center;
+                    width: 100%;
+                }
+                .title {
+                    font-size: 42px;
+                    font-weight: bold;
+                    line-height: 1.3;
+                    margin-bottom: 30px;
+                    word-break: break-word;
+                    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+                }
+                .author {
+                    font-size: 24px;
+                    opacity: 0.9;
+                    font-weight: 300;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="title">{{bookName}}</div>
+                <div class="author">{{author}}</div>
+            </div>
+        </body>
+        </html>
+        """.trimIndent()
+    }
+
     val dictRules: List<DictRule> by lazy {
         val json = String(
             appCtx.assets.open("defaultData${File.separator}dictRules.json")

@@ -1003,6 +1003,12 @@
     <string name="only_wifi_summary">Load network cover only under wifi</string>
     <string name="cover_rule">Cover rule</string>
     <string name="cover_rule_summary">Use the cover rule to retrieve the cover when entering the details page</string>
+    <string name="cover_html_code">Auto generate cover code</string>
+    <string name="cover_html_code_summary">Customize HTML code to generate cover images</string>
+    <string name="cover_html_preview">Preview</string>
+    <string name="cover_html_book_name">Book Name</string>
+    <string name="cover_html_author">Author</string>
+    <string name="html_code">HTML Code</string>
     <string name="scroll_to_dur_source">Navigate to the current book source</string>
     <string name="sys_tts_config">System tts Settings</string>
     <string name="sys_tts_config_summary">Open the system tts settings interface</string>

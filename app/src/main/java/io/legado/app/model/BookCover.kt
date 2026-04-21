@@ -56,6 +56,8 @@ object BookCover {
 
     private const val coverRuleConfigKey = "legadoCoverRuleConfig"
 
+    private const val coverHtmlCodeKey = "legadoCoverHtmlCode"
+
     const val configFileName = "coverRule.json"
 
     var drawBookName = true
@@ -324,6 +326,47 @@ object BookCover {
     }
 
     /**
+     * 获取HTML封面代码配置
+     * @return HTML封面代码配置，若未配置则返回默认配置
+     */
+    fun getCoverHtmlCode(): CoverHtmlCode {
+        return GSON.fromJsonObject<CoverHtmlCode>(CacheManager.get(coverHtmlCodeKey))
+            .getOrNull() ?: CoverHtmlCode()
+    }
+
+    /**
+     * 保存HTML封面代码配置
+     * @param config HTML封面代码配置对象
+     */
+    fun saveCoverHtmlCode(config: CoverHtmlCode) {
+        val json = GSON.toJson(config)
+        CacheManager.put(coverHtmlCodeKey, json)
+    }
+
+    /**
+     * 删除HTML封面代码配置
+     */
+    fun delCoverHtmlCode() {
+        CacheManager.delete(coverHtmlCodeKey)
+    }
+
+    /**
+     * 渲染HTML模板
+     * 
+     * 将模板中的变量替换为实际值
+     * 
+     * @param template HTML模板
+     * @param bookName 书名
+     * @param author 作者
+     * @return 渲染后的HTML字符串
+     */
+    fun renderHtmlTemplate(template: String, bookName: String, author: String): String {
+        return template
+            .replace("{{bookName}}", bookName)
+            .replace("{{author}}", author)
+    }
+
+    /**
      * 封面规则配置类
      * 
      * 用于定义自动搜索封面的规则，实现 BaseSource 接口
@@ -360,5 +403,19 @@ object BookCover {
             return searchUrl
         }
     }
+
+    /**
+     * HTML封面代码配置类
+     * 
+     * 用于定义自定义HTML模板来生成封面图片
+     * 
+     * @property enable 是否启用此功能
+     * @property htmlCode HTML代码模板，支持 {{bookName}} 和 {{author}} 变量
+     */
+    @Keep
+    data class CoverHtmlCode(
+        var enable: Boolean = false,
+        var htmlCode: String = ""
+    )
 
 }
