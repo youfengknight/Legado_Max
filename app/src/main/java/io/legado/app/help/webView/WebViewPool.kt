@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import io.legado.app.R
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.rss.read.VisibleWebView
 import io.legado.app.utils.setDarkeningAllowed
@@ -53,6 +54,16 @@ object WebViewPool {
     private const val IDLE_TIME_OUT_LAST: Long = 30 * 60 * 1000 // 最后一个闲置30分钟后销毁
     private val cleanupScope by lazy { CoroutineScope(Dispatchers.IO + SupervisorJob()) }
     private var cleanupJob: Job? = null
+
+    private fun nextInlineContentGeneration(webView: WebView): Long {
+        val generation = ((webView.getTag(R.id.inline_content_generation) as? Long) ?: 0L) + 1L
+        webView.setTag(R.id.inline_content_generation, generation)
+        return generation
+    }
+
+    private fun currentInlineContentGeneration(webView: WebView): Long {
+        return (webView.getTag(R.id.inline_content_generation) as? Long) ?: 0L
+    }
 
     // 获取一个WebView
     @Synchronized
@@ -140,6 +151,7 @@ object WebViewPool {
     }
 
     fun prepareForInlineContent(webView: WebView) {
+        nextInlineContentGeneration(webView)
         val layoutParams = (webView.layoutParams ?: ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -154,10 +166,20 @@ object WebViewPool {
     }
 
     fun fitInlineContent(webView: WebView, afterLayout: (() -> Unit)? = null) {
+        fitInlineContent(webView, currentInlineContentGeneration(webView), afterLayout)
+    }
+
+    fun fitInlineContent(
+        webView: WebView,
+        generation: Long,
+        afterLayout: (() -> Unit)? = null
+    ) {
         webView.post {
+            if (currentInlineContentGeneration(webView) != generation) return@post
             val fallbackHeight = (webView.contentHeight * webView.resources.displayMetrics.density)
                 .roundToInt()
             webView.evaluateJavascript(inlineHeightScript) { result ->
+                if (currentInlineContentGeneration(webView) != generation) return@evaluateJavascript
                 val jsHeight = result
                     ?.trim('"')
                     ?.toFloatOrNull()
@@ -186,9 +208,10 @@ object WebViewPool {
         afterLayout: (() -> Unit)? = null,
         delays: LongArray = longArrayOf(0L, 80L, 240L, 600L, 1200L)
     ) {
+        val generation = currentInlineContentGeneration(webView)
         delays.forEach { delayMillis ->
             webView.postDelayed({
-                fitInlineContent(webView, afterLayout)
+                fitInlineContent(webView, generation, afterLayout)
             }, delayMillis)
         }
     }
