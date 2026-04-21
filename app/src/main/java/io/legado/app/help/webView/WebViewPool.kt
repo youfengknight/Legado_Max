@@ -4,11 +4,15 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.MutableContextWrapper
 import android.os.Build
+import android.view.MotionEvent
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import io.legado.app.R
 import io.legado.app.help.config.AppConfig
+import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.ui.rss.read.VisibleWebView
 import io.legado.app.utils.setDarkeningAllowed
 import kotlinx.coroutines.CoroutineScope
@@ -21,11 +25,26 @@ import kotlinx.coroutines.launch
 import splitties.init.appCtx
 import java.util.Stack
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 object WebViewPool {
     const val BLANK_HTML = "about:blank"
     const val DATA_HTML = "data:text/html;charset=utf-8;base64,"
+    private val inlineHeightScript = """
+        (function() {
+            var doc = document.documentElement;
+            var body = document.body;
+            return Math.max(
+                doc ? doc.scrollHeight : 0,
+                doc ? doc.offsetHeight : 0,
+                doc ? doc.clientHeight : 0,
+                body ? body.scrollHeight : 0,
+                body ? body.offsetHeight : 0,
+                body ? body.clientHeight : 0
+            );
+        })();
+    """.trimIndent()
     // 未使用的、已预初始化的WebView池 (使用栈结构，后进先出，复用缓存)
     private val idlePool = Stack<PooledWebView>()
     // 正在使用的WebView集合
@@ -37,6 +56,16 @@ object WebViewPool {
     private const val IDLE_TIME_OUT_LAST: Long = 30 * 60 * 1000 // 最后一个闲置30分钟后销毁
     private val cleanupScope by lazy { CoroutineScope(Dispatchers.IO + SupervisorJob()) }
     private var cleanupJob: Job? = null
+
+    private fun nextInlineContentGeneration(webView: WebView): Long {
+        val generation = ((webView.getTag(R.id.inline_content_generation) as? Long) ?: 0L) + 1L
+        webView.setTag(R.id.inline_content_generation, generation)
+        return generation
+    }
+
+    private fun currentInlineContentGeneration(webView: WebView): Long {
+        return (webView.getTag(R.id.inline_content_generation) as? Long) ?: 0L
+    }
 
     // 获取一个WebView
     @Synchronized
@@ -81,6 +110,9 @@ object WebViewPool {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 setOnScrollChangeListener(null)
             }
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            isHorizontalScrollBarEnabled = true
+            isVerticalScrollBarEnabled = true
             setDownloadListener(null)
             outlineProvider = null
             clipToOutline = false
@@ -120,6 +152,88 @@ object WebViewPool {
                 }
             }
             loadUrl(BLANK_HTML)
+        }
+    }
+
+    fun prepareForInlineContent(webView: WebView) {
+        nextInlineContentGeneration(webView)
+        webView.setBackgroundColor(webView.context.backgroundColor)
+        webView.overScrollMode = View.OVER_SCROLL_NEVER
+        webView.isHorizontalScrollBarEnabled = false
+        webView.isVerticalScrollBarEnabled = false
+        val layoutParams = (webView.layoutParams ?: ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )).also {
+            it.width = ViewGroup.LayoutParams.MATCH_PARENT
+            // Reset stale measured height before loading shorter HTML into a reused WebView.
+            it.height = 1
+        }
+        webView.layoutParams = layoutParams
+        webView.scrollTo(0, 0)
+        webView.requestLayout()
+    }
+
+    fun fitInlineContent(webView: WebView, afterLayout: (() -> Unit)? = null) {
+        fitInlineContent(webView, currentInlineContentGeneration(webView), afterLayout)
+    }
+
+    fun fitInlineContent(
+        webView: WebView,
+        generation: Long,
+        afterLayout: (() -> Unit)? = null
+    ) {
+        webView.post {
+            if (currentInlineContentGeneration(webView) != generation) return@post
+            val fallbackHeight = (webView.contentHeight * webView.resources.displayMetrics.density)
+                .roundToInt()
+            webView.evaluateJavascript(inlineHeightScript) { result ->
+                if (currentInlineContentGeneration(webView) != generation) return@evaluateJavascript
+                val jsHeight = result
+                    ?.trim('"')
+                    ?.toFloatOrNull()
+                    ?.times(webView.resources.displayMetrics.density)
+                    ?.roundToInt()
+                    ?: 0
+                val targetHeight = max(jsHeight, fallbackHeight)
+                    .takeIf { it > 1 }
+                    ?: ViewGroup.LayoutParams.WRAP_CONTENT
+                val layoutParams = (webView.layoutParams ?: ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    targetHeight
+                )).also {
+                    it.width = ViewGroup.LayoutParams.MATCH_PARENT
+                    it.height = targetHeight
+                }
+                webView.layoutParams = layoutParams
+                webView.requestLayout()
+                afterLayout?.invoke()
+            }
+        }
+    }
+
+    fun scheduleInlineContentFit(
+        webView: WebView,
+        afterLayout: (() -> Unit)? = null,
+        delays: LongArray = longArrayOf(0L, 80L, 240L, 600L, 1200L)
+    ) {
+        val generation = currentInlineContentGeneration(webView)
+        delays.forEach { delayMillis ->
+            webView.postDelayed({
+                fitInlineContent(webView, generation, afterLayout)
+            }, delayMillis)
+        }
+    }
+
+    fun installInlineContentRefitOnTouch(
+        webView: WebView,
+        afterLayout: (() -> Unit)? = null
+    ) {
+        webView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
+                scheduleInlineContentFit(webView, afterLayout, longArrayOf(120L, 360L, 720L))
+            }
+            false
         }
     }
 

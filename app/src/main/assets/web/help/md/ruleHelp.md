@@ -1,4 +1,4 @@
-# 源规则帮助
+﻿# 源规则帮助
 
 * [阅读3.0(Legado)规则说明](https://mgz0227.github.io/The-tutorial-of-Legado/)　
 * [书源帮助文档](https://mgz0227.github.io/The-tutorial-of-Legado/Rule/source.html)　
@@ -388,3 +388,11 @@ result = `<img src = "${url}">`;
 ```
 > 支持Markdown语法，需要用`<md></md>`包裹起来  
 > 支持使用浏览器渲染，需要用`<useweb></useweb>`包裹起来  
+
+> `useweb` 页面会自动注入当前源的 `jsLib`、`java`、`source`、`cache`。  
+> 因此可以直接在 `jsLib` 中定义函数，再在 `<useweb>` 页面里调用。  
+> 适合做发现页按钮、跳转、提示、局部交互等简单页面逻辑。  
+
+> 如果需要在函数里访问注入对象，推荐使用 `fn.call(this)` 这种方式调用。  
+> 函数内部即可通过 `this.java`、`this.source`，或者先解构 `const { java, source } = this` 来使用。  
+

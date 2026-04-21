@@ -36,13 +36,6 @@ abstract class BaseService : LifecycleService() {
     ) = Coroutine.async(scope, context, start, executeContext, semaphore, block)
 
     @CallSuper
-    override fun onCreate() {
-        super.onCreate()
-        LifecycleHelp.onServiceCreate(this)
-        checkPermission()
-    }
-
-    @CallSuper
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         LogUtils.d(simpleName) {
             "onStartCommand $intent ${intent?.toUri(0)}"
@@ -52,6 +45,15 @@ abstract class BaseService : LifecycleService() {
             isForeground = true
         }
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    @CallSuper
+    override fun onCreate() {
+        super.onCreate()
+        LifecycleHelp.onServiceCreate(this)
+        startForegroundNotification()
+        isForeground = true
+        checkPermission()
     }
 
     @CallSuper
@@ -94,8 +96,9 @@ abstract class BaseService : LifecycleService() {
             .addPermissions(Permissions.POST_NOTIFICATIONS)
             .rationale(R.string.notification_permission_rationale)
             .onGranted {
-                if (lifecycleScope.isActive) {
+                if (lifecycleScope.isActive && !isForeground) {
                     startForegroundNotification()
+                    isForeground = true
                 }
             }
             .request()

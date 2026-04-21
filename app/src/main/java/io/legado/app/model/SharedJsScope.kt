@@ -27,6 +27,53 @@ object SharedJsScope {
 
     private val scopeMap = LruCache<String, WeakReference<Scriptable>>(16)
 
+    private fun resolveJsLibString(jsLib: String?): String? {
+        if (jsLib.isNullOrBlank()) {
+            return null
+        }
+        return if (jsLib.isJsonObject()) {
+            val jsMap: Map<String, String> = GSON.fromJson(
+                jsLib,
+                TypeToken.getParameterized(
+                    Map::class.java,
+                    String::class.java,
+                    String::class.java
+                ).type
+            )
+            buildString {
+                jsMap.values.forEach { value ->
+                    val js = when {
+                        value.isAbsUrl() -> {
+                            val fileName = MD5Utils.md5Encode(value)
+                            var cacheJs = aCache.getAsString(fileName)
+                            if (cacheJs == null) {
+                                cacheJs = runBlocking {
+                                    okHttpClient.newCallStrResponse {
+                                        url(value)
+                                    }.body
+                                }
+                                if (cacheJs != null) {
+                                    aCache.put(fileName, cacheJs)
+                                } else {
+                                    throw NoStackTraceException("涓嬭浇jsLib-${value}澶辫触")
+                                }
+                            }
+                            cacheJs
+                        }
+
+                        else -> value
+                    }
+                    if (!js.isNullOrBlank()) {
+                        if (isNotEmpty()) append('\n')
+                        append(js)
+                    }
+                }
+            }.takeIf { it.isNotBlank() }
+        } else {
+            jsLib
+        }
+    }
+
     fun getScope(jsLib: String?, coroutineContext: CoroutineContext?): Scriptable? {
         if (jsLib.isNullOrBlank()) {
             return null
@@ -37,46 +84,22 @@ object SharedJsScope {
             scope = RhinoScriptEngine.run {
                 getRuntimeScope(ScriptBindings())
             }
-            if (jsLib.isJsonObject()) {
-                val jsMap: Map<String, String> = GSON.fromJson(
-                    jsLib,
-                    TypeToken.getParameterized(
-                        Map::class.java,
-                        String::class.java,
-                        String::class.java
-                    ).type
-                )
-                jsMap.values.forEach { value ->
-                    if (value.isAbsUrl()) {
-                        val fileName = MD5Utils.md5Encode(value)
-                        var js = aCache.getAsString(fileName)
-                        if (js == null) {
-                            js = runBlocking {
-                                okHttpClient.newCallStrResponse {
-                                    url(value)
-                                }.body
-                            }
-                            if (js != null) {
-                                aCache.put(fileName, js)
-                            } else {
-                                throw NoStackTraceException("下载jsLib-${value}失败")
-                            }
-                        }
-                        RhinoScriptEngine.eval(js, scope, coroutineContext)
-                    }
-                }
-            } else {
-                RhinoScriptEngine.eval(jsLib, scope, coroutineContext)
+            resolveJsLibString(jsLib)?.let {
+                RhinoScriptEngine.eval(it, scope, coroutineContext)
             }
             if (scope is ScriptableObject) {
                 /**
-                 * 阻止新全局增加（即函数内未用var的隐性全局变量创建）,会直接隐性创建失败,提示变量未定义
+                 * 闃绘鏂板叏灞€澧炲姞锛堝嵆鍑芥暟鍐呮湭鐢╲ar鐨勯殣鎬у叏灞€鍙橀噺鍒涘缓锛変細鐩存帴闅愭€у垱寤哄け璐ワ紝鎻愮ず鍙橀噺鏈畾涔?
                  */
                 scope.preventExtensions()
             }
             scopeMap.put(key, WeakReference(scope))
         }
         return scope
+    }
+
+    fun getJsLibString(jsLib: String?): String? {
+        return resolveJsLibString(jsLib)
     }
 
     fun remove(jsLib: String?) {

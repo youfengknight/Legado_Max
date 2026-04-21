@@ -232,7 +232,6 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
                     appDb.bookChapterDao.delByBook(book.bookUrl)
                     appDb.bookChapterDao.insert(*it.toTypedArray())
                     ReadBook.onChapterListUpdated(book)
-                    bookData.postValue(book)
                     chapterListData.postValue(it)
                 }
             }.onError {
@@ -260,7 +259,6 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
                         appDb.bookChapterDao.insert(*it.toTypedArray())
                         ReadBook.onChapterListUpdated(book)
                     }
-                    bookData.postValue(book)
                     chapterListData.postValue(it)
                 }.onError {
                     chapterListData.postValue(emptyList())

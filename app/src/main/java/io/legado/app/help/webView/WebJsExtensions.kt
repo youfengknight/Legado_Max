@@ -8,6 +8,7 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.model.SharedJsScope
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.ui.rss.read.RssJsExtensions
 import io.legado.app.utils.GSON
@@ -230,6 +231,25 @@ class WebJsExtensions(
         }
 
         val getInjectionString = "try{var cache=$nameCache,source=$nameSource,java=$nameJava;}catch(e){}"
+
+        fun buildUseWebInjection(source: BaseSource?): String {
+            return buildString {
+                append(getInjectionString)
+                SharedJsScope.getJsLibString(source?.jsLib)?.takeIf { it.isNotBlank() }?.let {
+                    append('\n')
+                    append(it)
+                }
+            }
+        }
+
+        fun wrapUseWebHtml(html: String, source: BaseSource?): String {
+            val injection = buildUseWebInjection(source).trim()
+            if (injection.isEmpty()) {
+                return html
+            }
+            val safeInjection = Regex("(?i)</script>").replace(injection, "<\\\\/script>")
+            return "<script>\n$safeInjection\n</script>\n$html"
+        }
 
         val JS_INJECTION by lazy { """
             const requestId = n => 'req_' + n + '_' + Date.now() + '_' + Math.random().toString(36).slice(-3);

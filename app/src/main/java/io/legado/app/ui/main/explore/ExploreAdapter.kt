@@ -46,14 +46,20 @@ import io.legado.app.help.WebCacheManager
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.webView.PooledWebView
 import io.legado.app.help.webView.WebJsExtensions
-import io.legado.app.help.webView.WebJsExtensions.Companion.getInjectionString
+import io.legado.app.help.webView.WebJsExtensions.Companion.buildUseWebInjection
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
+import io.legado.app.help.webView.WebJsExtensions.Companion.wrapUseWebHtml
 import io.legado.app.help.webView.WebViewPool
+import io.legado.app.help.webView.WebViewPool.fitInlineContent
+import io.legado.app.help.webView.WebViewPool.installInlineContentRefitOnTouch
+import io.legado.app.help.webView.WebViewPool.prepareForInlineContent
+import io.legado.app.help.webView.WebViewPool.scheduleInlineContentFit
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.login.SourceLoginJsExtensions
@@ -62,6 +68,7 @@ import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.ui.widget.text.AccentTextView
 import io.legado.app.ui.widget.text.ScrollTextView
 import io.legado.app.utils.InfoMap
+import io.legado.app.utils.GSON
 import io.legado.app.utils.activity
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
@@ -89,14 +96,15 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
     RecyclerAdapter<BookSourcePart, ItemFindBookBinding>(context) {
     companion object {
         val exploreInfoMapList = LruCache<String, InfoMap>(99)
+        private val exploreWebViewHeightCache = LruCache<String, Int>(99)
     }
     private val recycler = arrayListOf<TextView>()
     private val textRecycler = arrayListOf<AutoCompleteTextView>()
     private val selectRecycler = arrayListOf<LinearLayout>()
     private val htmlRecycler = arrayListOf<FrameLayout>()
 
-    private var exIndex = -1
-    private var scrollTo = -1
+    private var expandedSourceUrl: String? = null
+    private var scrollToSourceUrl: String? = null
     private var lastClickTime: Long = 0
     private val sourceKinds = ConcurrentHashMap<String, List<ExploreKind>>()
     private val activeWebViews = linkedMapOf<FrameLayout, PooledWebView>()
@@ -121,7 +129,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
             if (payloads.isEmpty()) {
                 tvName.text = item.bookSourceName
             }
-            if (exIndex == holder.layoutPosition) {
+            if (expandedSourceUrl == item.bookSourceUrl) {
                 ivStatus.setImageResource(R.drawable.ic_arrow_down)
                 rotateLoading.loadingColor = context.accentColor
                 rotateLoading.visible()
@@ -133,12 +141,14 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                         sourceKinds[item.bookSourceUrl] = it
                     }
                 }.onSuccess { kindList ->
-                    upKindList(this@run, item, kindList, exIndex)
+                    upKindList(this@run, item, kindList, item)
                 }.onFinally {
                     rotateLoading.gone()
-                    if (scrollTo >= 0) {
-                        callBack.scrollTo(scrollTo)
-                        scrollTo = -1
+                    scrollToSourceUrl?.let { sourceUrl ->
+                        findSourcePosition(sourceUrl)?.let(callBack::scrollTo)
+                        if (sourceUrl == item.bookSourceUrl) {
+                            scrollToSourceUrl = null
+                        }
                     }
                 }
             } else kotlin.runCatching {
@@ -151,7 +161,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
     }
 
     @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
-    private fun upKindList(binding: ItemFindBookBinding, item: BookSourcePart, kinds: List<ExploreKind>, exIndex: Int) {
+    private fun upKindList(binding: ItemFindBookBinding, item: BookSourcePart, kinds: List<ExploreKind>, expandedItem: BookSourcePart) {
         if (kinds.isEmpty()) {
             return
         }
@@ -173,7 +183,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                         }
 
                         override fun reUiView(deltaUp: Boolean) {
-                            refreshExplore(item, exIndex, binding)
+                            refreshExplore(expandedItem, binding)
                         }
                     })
             }
@@ -607,7 +617,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         resolveHtmlContent(kind, source, infoMap, title).onSuccess { rawContent ->
             val content = rawContent?.trim().orEmpty()
             when {
-                content.startsWith("<useweb>") -> bindExploreWebView(container, content, source)
+                content.startsWith("<useweb>") -> bindExploreWebView(container, content, source, infoMap)
                 content.startsWith("<usehtml>") -> bindExploreTextView(
                     container,
                     content,
@@ -703,22 +713,43 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
     private fun bindExploreWebView(
         container: FrameLayout,
         content: String,
-        source: BookSource?
+        source: BookSource?,
+        infoMap: InfoMap
     ) {
         val endIndex = content.lastIndexOf("<")
         if (endIndex < 8) {
             container.gone()
             return
         }
-        val html = content.substring(8, endIndex)
+        val useWebHtml = content.substring(8, endIndex)
+        val pageKey = buildExploreUseWebPageKey(source, useWebHtml)
+        val pageJs = buildExploreUseWebPageInjection(
+            pageKey = pageKey,
+            initialPage = infoMap["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+        )
+        val html = wrapExploreUseWebHtml(useWebHtml, source, pageJs)
         val pooledWebView = WebViewPool.acquire(context)
         val webView = pooledWebView.realWebView
+        container.setBackgroundColor(context.backgroundColor)
         webView.onResume()
-        webView.webViewClient = ExploreHtmlWebViewClient(container)
+        prepareForInlineContent(webView)
+        exploreWebViewHeightCache[pageKey]?.takeIf { it > 1 }?.let { cachedHeight ->
+            webView.layoutParams = (webView.layoutParams ?: FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                cachedHeight
+            )).also {
+                it.width = FrameLayout.LayoutParams.MATCH_PARENT
+                it.height = cachedHeight
+            }
+        }
+        installInlineContentRefitOnTouch(webView) {
+            container.requestLayout()
+        }
+        webView.webViewClient = ExploreHtmlWebViewClient(container, source, pageJs, pageKey)
         webView.addJavascriptInterface(WebCacheManager, nameCache)
         source?.let {
             webView.addJavascriptInterface(it as BaseSource, nameSource)
-            val webJsExtensions = WebJsExtensions(it, null, webView)
+            val webJsExtensions = WebJsExtensions(it, context as? AppCompatActivity, webView)
             webView.addJavascriptInterface(webJsExtensions, nameJava)
         }
         container.addView(webView)
@@ -732,6 +763,92 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         activeWebViews.remove(container)?.let {
             WebViewPool.release(it)
         }
+    }
+
+    private fun buildExploreUseWebPageKey(source: BookSource?, html: String): String {
+        return buildString {
+            append("useweb_page_")
+            append(source?.bookSourceUrl ?: "default")
+            append('_')
+            append(html.hashCode())
+        }
+    }
+
+    private fun buildExploreUseWebPageInjection(pageKey: String, initialPage: Int): String {
+        val safePage = initialPage.coerceAtLeast(1)
+        val keyJson = GSON.toJson(pageKey)
+        return """
+            try{
+                const __useWebPageKey = $keyJson;
+                const __useWebDefaultPage = $safePage;
+                const __readUseWebPage = () => {
+                    const cachedPage = parseInt(cache.getFromMemory(__useWebPageKey), 10);
+                    return Number.isFinite(cachedPage) && cachedPage > 0 ? cachedPage : __useWebDefaultPage;
+                };
+                const __writeUseWebPage = value => {
+                    const nextPage = parseInt(value, 10);
+                    const safeNextPage = Number.isFinite(nextPage) && nextPage > 0 ? nextPage : __useWebDefaultPage;
+                    cache.putMemory(__useWebPageKey, String(safeNextPage));
+                    return safeNextPage;
+                };
+                Object.defineProperty(window, 'page', {
+                    configurable: true,
+                    get() {
+                        return __readUseWebPage();
+                    },
+                    set(value) {
+                        __writeUseWebPage(value);
+                    }
+                });
+                if (typeof Element !== 'undefined' && !Object.getOwnPropertyDescriptor(Element.prototype, 'page')) {
+                    Object.defineProperty(Element.prototype, 'page', {
+                        configurable: true,
+                        get() {
+                            return window.page;
+                        },
+                        set(value) {
+                            window.page = value;
+                        }
+                    });
+                }
+                if (java && typeof java.open === 'function' && !java.__exploreUseWebPageWrapped) {
+                    const __rawOpen = java.open.bind(java);
+                    java.open = function(name, url, title, origin) {
+                        if (name === 'explore' && typeof url === 'string') {
+                            const match = url.match(/[?&]page=(\d+)/i);
+                            if (match) {
+                                __writeUseWebPage(parseInt(match[1], 10) + 1);
+                            }
+                        }
+                        return __rawOpen(name, url, title, origin);
+                    };
+                    java.__exploreUseWebPageWrapped = true;
+                }
+            }catch(e){}
+        """.trimIndent()
+    }
+
+    private fun wrapExploreUseWebHtml(html: String, source: BookSource?, pageJs: String): String {
+        val inlineStyle = """
+            <style>
+            html,body{background:transparent;}
+            </style>
+        """.trimIndent()
+        val injection = buildString {
+            val baseJs = buildUseWebInjection(source).trim()
+            if (baseJs.isNotEmpty()) {
+                append(baseJs)
+            }
+            if (pageJs.isNotBlank()) {
+                if (isNotEmpty()) append('\n')
+                append(pageJs.trim())
+            }
+        }
+        if (injection.isBlank()) {
+            return "$inlineStyle\n$html"
+        }
+        val safeInjection = Regex("(?i)</script>").replace(injection, "<\\\\/script>")
+        return "$inlineStyle\n<script>\n$safeInjection\n</script>\n$html"
     }
 
     @Synchronized
@@ -771,30 +888,52 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
     override fun registerListener(holder: ItemViewHolder, binding: ItemFindBookBinding) {
         binding.apply {
             llTitle.setOnClickListener {
-                val position = holder.layoutPosition
-                val oldEx = exIndex
-                exIndex = if (exIndex == position) -1 else position
-                notifyItemChanged(oldEx, false)
-                if (exIndex != -1) {
-                    scrollTo = position
-                    callBack.scrollTo(position)
-                    notifyItemChanged(position, false)
+                val position = holder.bindingAdapterPosition.takeIf { it >= 0 } ?: return@setOnClickListener
+                val item = getItem(position) ?: return@setOnClickListener
+                val oldExpandedSourceUrl = expandedSourceUrl
+                expandedSourceUrl = if (oldExpandedSourceUrl == item.bookSourceUrl) null else item.bookSourceUrl
+                oldExpandedSourceUrl?.let { sourceUrl ->
+                    findSourcePosition(sourceUrl)?.let {
+                        notifyItemChanged(it, false)
+                    }
+                }
+                expandedSourceUrl?.let { sourceUrl ->
+                    scrollToSourceUrl = sourceUrl
+                    findSourcePosition(sourceUrl)?.let {
+                        callBack.scrollTo(it)
+                        notifyItemChanged(it, false)
+                    }
                 }
             }
             llTitle.onLongClick {
-                showMenu(binding, holder.layoutPosition)
+                val position = holder.bindingAdapterPosition
+                if (position >= 0) {
+                    showMenu(binding, position)
+                } else {
+                    true
+                }
             }
         }
     }
 
     fun compressExplore(): Boolean {
-        return if (exIndex < 0) {
+        val sourceUrl = expandedSourceUrl
+        return if (sourceUrl == null) {
             false
         } else {
-            val oldExIndex = exIndex
-            exIndex = -1
-            notifyItemChanged(oldExIndex)
+            expandedSourceUrl = null
+            findSourcePosition(sourceUrl)?.let {
+                notifyItemChanged(it)
+            }
             true
+        }
+    }
+
+    fun refreshExpandedItem() {
+        expandedSourceUrl?.let { sourceUrl ->
+            findSourcePosition(sourceUrl)?.let {
+                notifyItemChanged(it)
+            }
         }
     }
 
@@ -811,13 +950,15 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         }
     }
 
-    private fun refreshExplore(source: BookSourcePart, position: Int, binding: ItemFindBookBinding) {
+    private fun refreshExplore(source: BookSourcePart, binding: ItemFindBookBinding) {
         binding.rotateLoading.visible()
         Coroutine.async(callBack.scope) {
             source.clearExploreKindsCache()
             sourceKinds[source.bookSourceUrl] = source.exploreKinds()
         }.onSuccess {
-            notifyItemChanged(position, false)
+            findSourcePosition(source.bookSourceUrl)?.let {
+                notifyItemChanged(it, false)
+            }
         }.onFinally {
             binding.rotateLoading.gone()
         }
@@ -839,7 +980,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                     putExtra("key", source.bookSourceUrl)
                 }
 
-                R.id.menu_refresh -> refreshExplore(source, position, binding)
+                R.id.menu_refresh -> refreshExplore(source, binding)
 
                 R.id.menu_del -> callBack.deleteSource(source)
             }
@@ -860,10 +1001,29 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         fun showKindQueryDialog(source: BookSourcePart)
     }
 
+    private fun findSourcePosition(sourceUrl: String): Int? {
+        for (index in 0 until itemCount) {
+            val item = getItem(index) ?: continue
+            if (item.bookSourceUrl == sourceUrl) {
+                return index
+            }
+        }
+        return null
+    }
+
     private inner class ExploreHtmlWebViewClient(
-        private val container: FrameLayout
+        private val container: FrameLayout,
+        private val source: BaseSource?,
+        private val pageJs: String,
+        private val pageKey: String
     ) : WebViewClient() {
-        private val jsStr = getInjectionString
+        private val jsStr = buildString {
+            append(buildUseWebInjection(source))
+            if (pageJs.isNotBlank()) {
+                append('\n')
+                append(pageJs)
+            }
+        }
 
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
             request?.let {
@@ -896,8 +1056,14 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
 
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            container.post {
-                container.requestLayout()
+            view?.let {
+                scheduleInlineContentFit(it, afterLayout = {
+                    val height = it.layoutParams?.height ?: 0
+                    if (height > 1) {
+                        exploreWebViewHeightCache.put(pageKey, height)
+                    }
+                    container.requestLayout()
+                })
             }
         }
     }

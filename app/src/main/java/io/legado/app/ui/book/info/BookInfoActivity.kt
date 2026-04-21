@@ -52,11 +52,16 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.webView.PooledWebView
 import io.legado.app.help.webView.WebJsExtensions
-import io.legado.app.help.webView.WebJsExtensions.Companion.getInjectionString
+import io.legado.app.help.webView.WebJsExtensions.Companion.buildUseWebInjection
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
+import io.legado.app.help.webView.WebJsExtensions.Companion.wrapUseWebHtml
 import io.legado.app.help.webView.WebViewPool
+import io.legado.app.help.webView.WebViewPool.fitInlineContent
+import io.legado.app.help.webView.WebViewPool.installInlineContentRefitOnTouch
+import io.legado.app.help.webView.WebViewPool.prepareForInlineContent
+import io.legado.app.help.webView.WebViewPool.scheduleInlineContentFit
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.accentColor
@@ -500,8 +505,10 @@ class BookInfoActivity :
         upGroup(book.group)
     }
 
-    inner class CustomWebViewClient : WebViewClient() {
-        private val jsStr = getInjectionString
+    inner class CustomWebViewClient(
+        private val source: BaseSource?
+    ) : WebViewClient() {
+        private val jsStr = buildUseWebInjection(source)
         override fun shouldOverrideUrlLoading(
             view: WebView?,
             request: WebResourceRequest?
@@ -533,8 +540,10 @@ class BookInfoActivity :
         }
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            view?.post {
-                binding.tvIntroContainer.requestLayout()
+            view?.let {
+                scheduleInlineContentFit(it, afterLayout = {
+                    binding.tvIntroContainer.requestLayout()
+                })
             }
         }
     }
@@ -547,21 +556,29 @@ class BookInfoActivity :
                 introTextView.text = intro
                 return
             }
-            val html = intro.substring(8, lastIndex)
+            val html = wrapUseWebHtml(intro.substring(8, lastIndex), viewModel.bookSource)
             val pooledWebView = this.pooledWebView ?: let{
                 val pooledWebView = WebViewPool.acquire(this)
                 val webView = pooledWebView.realWebView
                 webView.onResume()
-                webView.webViewClient = CustomWebViewClient()
+                prepareForInlineContent(webView)
+                installInlineContentRefitOnTouch(webView) {
+                    binding.tvIntroContainer.requestLayout()
+                }
+                webView.webViewClient = CustomWebViewClient(viewModel.bookSource)
                 webView.addJavascriptInterface(WebCacheManager, nameCache)
                 viewModel.bookSource?.let {
                     webView.addJavascriptInterface(it as BaseSource, nameSource)
-                    val webJsExtensions = WebJsExtensions(it, null, webView)
+                    val webJsExtensions = WebJsExtensions(it, this, webView)
                     webView.addJavascriptInterface(webJsExtensions, nameJava)
                 }
                 pooledWebView
             }
             val webView = pooledWebView.realWebView
+            prepareForInlineContent(webView)
+            installInlineContentRefitOnTouch(webView) {
+                binding.tvIntroContainer.requestLayout()
+            }
             if (initIntroView || this.pooledWebView == null) {
                 initIntroView = false
                 this.pooledWebView = pooledWebView

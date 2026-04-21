@@ -101,6 +101,24 @@ java.refreshExplore()
 ```
 [showBrowser](https://github.com/Luoyacheng/legado/wiki/java.showBrowser%E5%87%BD%E6%95%B0%E4%BB%8B%E7%BB%8D)函数介绍
 
+### `jsLib` 在 `<useweb>` 中的调用
+> 当前源的 `<useweb></useweb>` 页面会自动注入 `jsLib`。  
+> 也就是说，定义在 `jsLib` 里的函数，可以直接在页面里调用。  
+> 页面中同时可用 `java`、`source`、`cache`，推荐通过 `call(this)` 保留当前上下文。
+
+```html
+<useweb>
+<button onclick="set.call(this)">发现</button>
+</useweb>
+```
+
+```js
+function set(){}
+```
+
+> 如果只是普通函数调用，例如 `set()`，在部分场景下 `this` 不是当前页面元素。  
+> 需要使用页面上下文时，优先写成 `set.call(this)`。  
+
 ### [AnalyzeUrl](https://github.com/gedoor/legado/blob/master/app/src/main/java/io/legado/app/model/analyzeRule/AnalyzeUrl.kt) 部分函数
 > js中通过java.调用,只在`登录检查JS`规则中有效
 ```js

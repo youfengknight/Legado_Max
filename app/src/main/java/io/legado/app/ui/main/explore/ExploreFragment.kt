@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.constant.AppLog
@@ -135,6 +136,8 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         binding.rvFind.setEdgeEffectColor(primaryColor)
         binding.rvFind.layoutManager = linearLayoutManager
         binding.rvFind.adapter = adapter
+        (binding.rvFind.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+        binding.rvFind.setItemViewCacheSize(8)
         adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
 
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -233,6 +236,7 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     override fun onResume() {
         super.onResume()
         adapter.upResumed(true)
+        adapter.refreshExpandedItem()
     }
 
     override fun onPause() {

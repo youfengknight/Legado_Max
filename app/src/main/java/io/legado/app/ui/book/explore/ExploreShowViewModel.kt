@@ -23,6 +23,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExploreShowViewModel(application: Application) : BaseViewModel(application) {
+    companion object {
+        private val pageQueryRegex = Regex("""([?&]page=)(\d+)""", RegexOption.IGNORE_CASE)
+    }
+
     val bookshelf: MutableSet<String> = ConcurrentHashMap.newKeySet()
     val upAdapterLiveData = MutableLiveData<String>()
     val booksData = MutableLiveData<List<SearchBook>>()
@@ -62,9 +66,11 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
         execute {
             val sourceUrl = intent.getStringExtra("sourceUrl")
             exploreUrl = intent.getStringExtra("exploreUrl")
+            page = parsePageFromUrl(exploreUrl)
             if (bookSource == null && sourceUrl != null) {
                 bookSource = appDb.bookSourceDao.getBookSource(sourceUrl)
             }
+            pageLiveData.postValue(page)
             explore()
         }
     }
@@ -74,7 +80,7 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
      */
     fun explore(page: Int) {
         val source = bookSource
-        val url = exploreUrl
+        val url = buildExploreUrl(page)
         if (source == null || url == null) return
         WebBook.exploreBook(viewModelScope, source, url, page)
             .timeout(if (BuildConfig.DEBUG) 0L else 60000L)
@@ -95,25 +101,44 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
         if (page > 0) {
             books.clear()
             this.page = page
+            pageLiveData.postValue(page)
         }
     }
 
     fun explore() {
         val source = bookSource
-        val url = exploreUrl
+        val requestPage = page
+        val url = buildExploreUrl(requestPage)
         if (source == null || url == null) return
-        WebBook.exploreBook(viewModelScope, source, url, page)
+        WebBook.exploreBook(viewModelScope, source, url, requestPage)
             .timeout(if (BuildConfig.DEBUG) 0L else 60000L)
             .onSuccess(IO) { searchBooks ->
                 books.addAll(searchBooks)
                 booksData.postValue(books.toList())
                 appDb.searchBookDao.insert(*searchBooks.toTypedArray())
-                pageLiveData.postValue(page)
-                page++
+                pageLiveData.postValue(requestPage)
+                page = requestPage + 1
             }.onError {
                 it.printOnDebug()
                 errorLiveData.postValue(it.stackTraceStr)
             }
+    }
+
+    private fun parsePageFromUrl(url: String?): Int {
+        val pageValue = url?.let {
+            pageQueryRegex.find(it)?.groupValues?.getOrNull(2)?.toIntOrNull()
+        }
+        return pageValue?.takeIf { it > 0 } ?: 1
+    }
+
+    private fun buildExploreUrl(page: Int): String? {
+        val safePage = page.coerceAtLeast(1)
+        val currentUrl = exploreUrl ?: return null
+        val updatedUrl = pageQueryRegex.replace(currentUrl) {
+            "${it.groupValues[1]}$safePage"
+        }
+        exploreUrl = updatedUrl
+        return updatedUrl
     }
 
     fun isInBookShelf(book: SearchBook): Boolean {
