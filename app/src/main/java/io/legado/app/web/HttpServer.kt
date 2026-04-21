@@ -3,6 +3,7 @@ package io.legado.app.web
 import android.graphics.Bitmap
 import fi.iki.elonen.NanoHTTPD
 import io.legado.app.api.ReturnData
+import io.legado.app.api.controller.BackupController
 import io.legado.app.api.controller.BookController
 import io.legado.app.api.controller.BookSourceController
 import io.legado.app.api.controller.ReplaceRuleController
@@ -41,7 +42,6 @@ class HttpServer(port: Int) : NanoHTTPD(port) {
                     response.addHeader("Access-Control-Allow-Methods", "POST")
                     response.addHeader("Access-Control-Allow-Headers", "content-type")
                     response.addHeader("Access-Control-Allow-Origin", session.headers["origin"])
-                    //response.addHeader("Access-Control-Max-Age", "3600");
                     return response
                 }
 
@@ -74,6 +74,17 @@ class HttpServer(port: Int) : NanoHTTPD(port) {
                 Method.GET -> {
                     val parameters = session.parameters
 
+                    when (uri) {
+                        "/backup" -> {
+                            val response = BackupController.backup()
+                            response.addHeader("Access-Control-Allow-Origin", session.headers["origin"])
+                            LogUtils.d(TAG) {
+                                "${session.method.name} - $uri - End($startAt)"
+                            }
+                            return response
+                        }
+                    }
+
                     returnData = when (uri) {
                         "/getBookSource" -> BookSourceController.getSource(parameters)
                         "/getBookSources" -> BookSourceController.sources
@@ -87,6 +98,7 @@ class HttpServer(port: Int) : NanoHTTPD(port) {
                         "/getRssSource" -> RssSourceController.getSource(parameters)
                         "/getRssSources" -> RssSourceController.sources
                         "/getReplaceRules" -> ReplaceRuleController.allRules
+                        "/backupPreview" -> BackupController.getBackupPreview()
                         else -> null
                     }
                 }

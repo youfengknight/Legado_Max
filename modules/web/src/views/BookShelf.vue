@@ -55,6 +55,15 @@
               {{ connectStatus }}
             </el-tag>
           </div>
+          <div class="setting-item">
+            <el-tag
+              size="large"
+              class="setting-connect"
+              @click="goToBackup"
+            >
+              数据备份
+            </el-tag>
+          </div>
         </div>
       </div>
       <div class="bottom-icons">
@@ -225,6 +234,9 @@ const setLegadoRetmoteUrl = () => {
 }
 
 const router = useRouter()
+const goToBackup = () => {
+  window.open(`${legado_http_entry_point}backup/`, '_blank')
+}
 const handleBookClick = async (book: SeachBook | Book) => {
   // 判断是否为 searchBook
   const isSeachBook = 'respondTime' in book

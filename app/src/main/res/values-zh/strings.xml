@@ -663,6 +663,7 @@
     <string name="change_icon_error">图标为矢量图标，Android 8.0 以前不支持</string>
     <string name="aloud_config">朗读设置</string>
     <string name="main_activity">主界面</string>
+    <string name="enhanced_features">增强功能</string>
     <string name="selectText">长按选择文本</string>
     <string name="header">页眉</string>
     <string name="main_body">正文</string>

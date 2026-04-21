@@ -34,22 +34,55 @@ import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 import java.io.File
 
-/**
- * webDav初始化会访问网络,不要放到主线程
+/**webDav初始化会访问网络,不要放到主线程
+ * WebDav云同步管理类
+ * 
+ * 提供WebDav协议的云端备份和同步功能，包括：
+ * - 备份文件上传/下载
+ * - 书籍进度同步
+ * - 背景图片同步
+ * 
+ * WebDav配置：
+ * - URL: WebDav服务器地址（默认为坚果云）
+ * - 账号: WebDav账号
+ * - 密码: WebDav密码
+ * - 目录: 备份存储目录
+ * - 设备名: 用于区分不同设备的备份
+ * 
+ * 目录结构：
+ * - rootWebDavUrl/: 根目录
+ *   - bookProgress/: 书籍进度目录
+ *   - books/: 书籍导出目录
+ *   - background/: 背景图片目录
+ *   - backup*.zip: 备份文件
+ * 
+ * 注意：WebDav初始化会访问网络，不要在主线程调用
  */
 object AppWebDav {
+
+    /** 默认WebDav服务器地址（坚果云） */
     private const val defaultWebDavUrl = "https://dav.jianguoyun.com/dav/"
+
+    /** 书籍进度同步URL */
     private val bookProgressUrl get() = "${rootWebDavUrl}bookProgress/"
+
+    /** 书籍导出URL */
     private val exportsWebDavUrl get() = "${rootWebDavUrl}books/"
+
+    /** 背景图片URL */
     private val bgWebDavUrl get() = "${rootWebDavUrl}background/"
 
+    /** WebDav授权信息 */
     var authorization: Authorization? = null
         private set
 
+    /** 默认书籍WebDav客户端 */
     var defaultBookWebDav: RemoteBookWebDav? = null
 
+    /** WebDav是否配置成功 */
     val isOk get() = authorization != null
 
+    /** 是否为坚果云服务 */
     val isJianGuoYun get() = rootWebDavUrl.startsWith(defaultWebDavUrl, true)
 
     init {
@@ -58,6 +91,10 @@ object AppWebDav {
         }
     }
 
+    /**
+     * WebDav根目录URL
+     * 由配置URL和目录名拼接而成
+     */
     private val rootWebDavUrl: String
         get() {
             val configUrl = appCtx.getPrefString(PreferKey.webDavUrl)?.trim()
@@ -71,6 +108,16 @@ object AppWebDav {
             return url
         }
 
+    /**
+     * 更新WebDav配置
+     * 读取SharedPreferences中的配置并初始化WebDav连接
+     * 
+     * 初始化时会创建必要的目录：
+     * - 根目录
+     * - 书籍进度目录
+     * - 书籍导出目录
+     * - 背景图片目录
+     */
     suspend fun upConfig() {
         kotlin.runCatching {
             authorization = null
@@ -91,6 +138,12 @@ object AppWebDav {
         }
     }
 
+    /**
+     * 检查WebDav授权是否有效
+     * 
+     * @param authorization 授权信息
+     * @throws WebDavException 授权失败时抛出异常
+     */
     @Throws(WebDavException::class)
     private suspend fun checkAuthorization(authorization: Authorization) {
         if (!WebDav(rootWebDavUrl, authorization).check()) {
@@ -100,6 +153,14 @@ object AppWebDav {
         }
     }
 
+    // ==================== 备份文件管理 ====================
+
+    /**
+     * 获取云端备份文件名列表
+     * 
+     * @return 备份文件名列表，按名称倒序排列
+     * @throws Exception WebDav未配置或网络错误时抛出异常
+     */
     @Throws(Exception::class)
     suspend fun getBackupNames(): ArrayList<String> {
         val names = arrayListOf<String>()
@@ -118,6 +179,17 @@ object AppWebDav {
         return names
     }
 
+    /**
+     * 从WebDav恢复备份
+     * 
+     * 执行步骤：
+     * 1. 下载备份文件
+     * 2. 解压到临时目录
+     * 3. 执行恢复逻辑
+     * 
+     * @param name 备份文件名
+     * @throws WebDavException 下载或恢复失败时抛出异常
+     */
     @Throws(WebDavException::class)
     suspend fun restoreWebDav(name: String) {
         authorization?.let {
@@ -129,6 +201,12 @@ object AppWebDav {
         }
     }
 
+    /**
+     * 检查WebDav上是否存在指定备份文件
+     * 
+     * @param backUpName 备份文件名
+     * @return true表示存在，false表示不存在或WebDav未配置
+     */
     suspend fun hasBackUp(backUpName: String): Boolean {
         authorization?.let {
             val url = "$rootWebDavUrl${backUpName}"
@@ -137,6 +215,11 @@ object AppWebDav {
         return false
     }
 
+    /**
+     * 获取最新的备份文件信息
+     * 
+     * @return Result包装的最新备份文件信息，失败时返回异常
+     */
     suspend fun lastBackUp(): Result<WebDavFile?> {
         return kotlin.runCatching {
             authorization?.let {
@@ -156,8 +239,10 @@ object AppWebDav {
     }
 
     /**
-     * webDav备份
+     * 上传备份文件到WebDav
+     * 
      * @param fileName 备份文件名
+     * @throws Exception 上传失败时抛出异常
      */
     @Throws(Exception::class)
     suspend fun backUpWebDav(fileName: String) {
@@ -168,8 +253,12 @@ object AppWebDav {
         }
     }
 
+    // ==================== 背景图片同步 ====================
+
     /**
-     * 获取云端所有背景名称
+     * 获取云端所有背景图片文件列表
+     * 
+     * @return Result包装的文件列表
      */
     private suspend fun getAllBgWebDavFiles(): Result<List<WebDavFile>> {
         return kotlin.runCatching {
@@ -183,7 +272,10 @@ object AppWebDav {
     }
 
     /**
-     * 上传背景图片
+     * 上传背景图片到WebDav
+     * 只上传云端不存在的图片
+     * 
+     * @param files 本地背景图片文件数组
      */
     suspend fun upBgs(files: Array<File>) {
         val authorization = authorization ?: return
@@ -200,7 +292,8 @@ object AppWebDav {
     }
 
     /**
-     * 下载背景图片
+     * 从WebDav下载背景图片
+     * 目前未实现完整逻辑
      */
     suspend fun downBgs() {
         val authorization = authorization ?: return
@@ -210,6 +303,14 @@ object AppWebDav {
             .toSet()
     }
 
+    // ==================== 书籍导出 ====================
+
+    /**
+     * 导出字节数据到WebDav
+     * 
+     * @param byteArray 要导出的字节数组
+     * @param fileName 导出文件名
+     */
     @Suppress("unused")
     suspend fun exportWebDav(byteArray: ByteArray, fileName: String) {
         if (!NetworkUtils.isAvailable()) return
@@ -225,6 +326,12 @@ object AppWebDav {
         }
     }
 
+    /**
+     * 导出URI指向的文件到WebDav
+     * 
+     * @param uri 文件URI
+     * @param fileName 导出文件名
+     */
     suspend fun exportWebDav(uri: Uri, fileName: String) {
         if (!NetworkUtils.isAvailable()) return
         try {
@@ -239,6 +346,15 @@ object AppWebDav {
         }
     }
 
+    // ==================== 书籍进度同步 ====================
+
+    /**
+     * 上传书籍阅读进度到WebDav
+     * 
+     * @param book 书籍对象
+     * @param toast 是否显示Toast提示
+     * @param onSuccess 成功回调
+     */
     suspend fun uploadBookProgress(
         book: Book,
         toast: Boolean = false,
@@ -260,6 +376,12 @@ object AppWebDav {
         }
     }
 
+    /**
+     * 上传书籍进度对象到WebDav
+     * 
+     * @param bookProgress 书籍进度对象
+     * @param onSuccess 成功回调
+     */
     suspend fun uploadBookProgress(bookProgress: BookProgress, onSuccess: (() -> Unit)? = null) {
         try {
             val authorization = authorization ?: return
@@ -275,16 +397,34 @@ object AppWebDav {
         }
     }
 
+    /**
+     * 获取书籍进度URL
+     * 
+     * @param name 书籍名称
+     * @param author 书籍作者
+     * @return WebDav URL
+     */
     private fun getProgressUrl(name: String, author: String): String {
         return bookProgressUrl + getProgressFileName(name, author)
     }
 
+    /**
+     * 生成进度文件名
+     * 格式：{书名}_{作者}.json
+     * 
+     * @param name 书籍名称
+     * @param author 书籍作者
+     * @return 文件名
+     */
     private fun getProgressFileName(name: String, author: String): String {
         return UrlUtil.replaceReservedChar("${name}_${author}".normalizeFileName()) + ".json"
     }
 
     /**
-     * 获取书籍进度
+     * 从WebDav获取书籍进度
+     * 
+     * @param book 书籍对象
+     * @return 书籍进度对象，失败返回null
      */
     suspend fun getBookProgress(book: Book): BookProgress? {
         val url = getProgressUrl(book.name, book.author)
@@ -303,6 +443,13 @@ object AppWebDav {
         return null
     }
 
+    /**
+     * 下载所有书籍进度并同步到本地
+     * 
+     * 同步规则：
+     * - 只同步云端更新时间大于本地同步时间的进度
+     * - 只更新进度更靠后的记录
+     */
     suspend fun downloadAllBookProgress() {
         val authorization = authorization ?: return
         if (!NetworkUtils.isAvailable()) return

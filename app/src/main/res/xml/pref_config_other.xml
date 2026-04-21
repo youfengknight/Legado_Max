@@ -38,13 +38,6 @@
             app:iconSpaceReserved="false" />
 
         <io.legado.app.lib.prefs.SwitchPreference
-            android:defaultValue="false"
-            android:key="tocPartialLoad"
-            android:summary="@string/ps_toc_partial_load"
-            android:title="@string/pt_toc_partial_load"
-            app:iconSpaceReserved="false" />
-
-        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="showDiscovery"
             android:title="@string/show_discovery"
@@ -56,14 +49,6 @@
             android:title="@string/show_rss"
             app:iconSpaceReserved="false" />
 
-        <!-- 调试模式开关，开启后"我的"页面显示调试工具入口 -->
-        <io.legado.app.lib.prefs.SwitchPreference
-            android:defaultValue="false"
-            android:key="debugMode"
-            android:summary="@string/debug_mode_summary"
-            android:title="@string/debug_mode"
-            app:iconSpaceReserved="false" />
-
         <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="bookshelf"
             android:key="defaultHomePage"
@@ -72,6 +57,32 @@
             app:allowDividerBelow="false"
             app:entries="@array/default_home_page"
             app:entryValues="@array/default_home_page_value" />
+
+    </io.legado.app.lib.prefs.PreferenceCategory>
+
+    <!-- 增强功能：包含目录不完全加载、调试模式等高级功能 -->
+    <io.legado.app.lib.prefs.PreferenceCategory
+        android:title="@string/enhanced_features"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false"
+        app:layout="@layout/view_preference_category">
+
+        <!-- 目录不完全加载：允许在目录未完全加载时进入内容 -->
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="tocPartialLoad"
+            android:summary="@string/ps_toc_partial_load"
+            android:title="@string/pt_toc_partial_load"
+            app:iconSpaceReserved="false" />
+
+        <!-- 调试模式：开启后"我的"页面显示调试工具入口 -->
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="debugMode"
+            android:summary="@string/debug_mode_summary"
+            android:title="@string/debug_mode"
+            app:iconSpaceReserved="false" />
 
     </io.legado.app.lib.prefs.PreferenceCategory>
 

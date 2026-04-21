@@ -60,14 +60,41 @@ import java.io.File
 import java.io.FileInputStream
 
 /**
- * 恢复
+ * 恢复管理类
+ * 
+ * 负责从备份文件恢复应用数据，包括：
+ * - 解压备份ZIP文件
+ * - 恢复数据库数据（书籍、书签、书源等）
+ * - 恢复SharedPreferences配置
+ * - 恢复自定义配置文件
+ * 
+ * 恢复流程：
+ * 1. 解压ZIP文件到临时目录
+ * 2. 读取JSON文件并导入数据库
+ * 3. 恢复SharedPreferences配置
+ * 4. 应用主题和阅读配置
+ * 5. 清理临时文件
+ * 
+ * 特殊处理：
+ * - 书籍数据：支持忽略本地书籍，更新已存在书籍
+ * - 阅读记录：根据设备ID判断是否为本机记录，智能合并
+ * - 服务器配置：需要解密
+ * - WebDav密码：需要解密
  */
 object Restore {
 
+    /** 互斥锁，防止并发恢复操作 */
     private val mutex = Mutex()
 
     private const val TAG = "Restore"
 
+    /**
+     * 从URI恢复备份
+     * 支持SAF（Storage Access Framework）和普通文件路径
+     * 
+     * @param context Android Context
+     * @param uri 备份文件URI
+     */
     suspend fun restore(context: Context, uri: Uri) {
         LogUtils.d(TAG, "开始恢复备份 uri:$uri")
         kotlin.runCatching {
@@ -92,14 +119,33 @@ object Restore {
         }
     }
 
+    /**
+     * 带锁的恢复方法
+     * 使用互斥锁确保同一时间只有一个恢复操作在执行
+     * 
+     * @param path 备份文件解压后的目录路径
+     */
     suspend fun restoreLocked(path: String) {
         mutex.withLock {
             restore(path)
         }
     }
 
+    /**
+     * 核心恢复逻辑
+     * 
+     * 执行步骤：
+     * 1. 恢复数据库数据（书籍、书签、书源等）
+     * 2. 恢复自定义配置文件（主题、阅读样式等）
+     * 3. 恢复SharedPreferences配置
+     * 4. 应用配置变更
+     * 
+     * @param path 备份文件解压后的目录路径
+     */
     private suspend fun restore(path: String) {
         val aes = BackupAES()
+
+        // 恢复书架数据
         fileToListT<Book>(path, "bookshelf.json")?.let {
             it.forEach { book ->
                 book.upType()
@@ -126,12 +172,18 @@ object Restore {
             }
             appDb.bookDao.insert(*newBooks.toTypedArray())
         }
+
+        // 恢复书签
         fileToListT<Bookmark>(path, "bookmark.json")?.let {
             appDb.bookmarkDao.insert(*it.toTypedArray())
         }
+
+        // 恢复书籍分组
         fileToListT<BookGroup>(path, "bookGroup.json")?.let {
             appDb.bookGroupDao.insert(*it.toTypedArray())
         }
+
+        // 恢复书源（兼容旧版本格式）
         fileToListT<BookSource>(path, "bookSource.json")?.let {
             appDb.bookSourceDao.insert(*it.toTypedArray())
         } ?: run {
@@ -141,40 +193,61 @@ object Restore {
                 ImportOldData.importOldSource(json)
             }
         }
+
+        // 恢复RSS源
         fileToListT<RssSource>(path, "rssSources.json")?.let {
             appDb.rssSourceDao.insert(*it.toTypedArray())
         }
+
+        // 恢复RSS收藏
         fileToListT<RssStar>(path, "rssStar.json")?.let {
             appDb.rssStarDao.insert(*it.toTypedArray())
         }
+
+        // 恢复替换规则
         fileToListT<ReplaceRule>(path, "replaceRule.json")?.let {
             appDb.replaceRuleDao.insert(*it.toTypedArray())
         }
+
+        // 恢复搜索历史
         fileToListT<SearchKeyword>(path, "searchHistory.json")?.let {
             appDb.searchKeywordDao.insert(*it.toTypedArray())
         }
+
+        // 恢复订阅源
         fileToListT<RuleSub>(path, "sourceSub.json")?.let {
             appDb.ruleSubDao.insert(*it.toTypedArray())
         }
+
+        // 恢复TXT目录规则
         fileToListT<TxtTocRule>(path, "txtTocRule.json")?.let {
             appDb.txtTocRuleDao.insert(*it.toTypedArray())
         }
+
+        // 恢复HTTP TTS配置
         fileToListT<HttpTTS>(path, "httpTTS.json")?.let {
             appDb.httpTTSDao.insert(*it.toTypedArray())
         }
+
+        // 恢复词典规则
         fileToListT<DictRule>(path, "dictRule.json")?.let {
             appDb.dictRuleDao.insert(*it.toTypedArray())
         }
+
+        // 恢复键盘辅助（先删除再插入，保证与备份数据一致）
         fileToListT<KeyboardAssist>(path, "keyboardAssists.json")?.let {
-            appDb.keyboardAssistsDao.deleteAll() //先删除所有,保证和备份数据一样
+            appDb.keyboardAssistsDao.deleteAll()
             appDb.keyboardAssistsDao.insert(*it.toTypedArray())
         }
+
+        // 恢复阅读记录（智能合并）
         fileToListT<ReadRecord>(path, "readRecord.json")?.let {
             it.forEach { readRecord ->
-                //判断是不是本机记录
+                // 判断是不是本机记录
                 if (readRecord.deviceId != androidId) {
                     appDb.readRecordDao.insert(readRecord)
                 } else {
+                    // 本机记录：只更新更新的记录
                     val time = appDb.readRecordDao
                         .getReadTime(readRecord.deviceId, readRecord.bookName)
                     if (time == null || time < readRecord.readTime) {
@@ -183,6 +256,8 @@ object Restore {
                 }
             }
         }
+
+        // 恢复服务器配置（需要解密）
         File(path, "servers.json").takeIf {
             it.exists()
         }?.runCatching {
@@ -196,6 +271,8 @@ object Restore {
         }?.onFailure {
             AppLog.put("恢复服务器配置出错\n${it.localizedMessage}", it)
         }
+
+        // 恢复直链上传配置
         File(path, DirectLinkUpload.ruleFileName).takeIf {
             it.exists()
         }?.runCatching {
@@ -204,7 +281,8 @@ object Restore {
         }?.onFailure {
             AppLog.put("恢复直链上传出错\n${it.localizedMessage}", it)
         }
-        //恢复主题配置
+
+        // 恢复主题配置
         File(path, ThemeConfig.configFileName).takeIf {
             it.exists()
         }?.runCatching {
@@ -214,6 +292,8 @@ object Restore {
         }?.onFailure {
             AppLog.put("恢复主题出错\n${it.localizedMessage}", it)
         }
+
+        // 恢复封面规则配置
         File(path, BookCover.configFileName).takeIf {
             it.exists()
         }?.runCatching {
@@ -222,6 +302,8 @@ object Restore {
         }?.onFailure {
             AppLog.put("恢复封面规则出错\n${it.localizedMessage}", it)
         }
+
+        // 恢复阅读界面配置（可配置忽略）
         if (!BackupConfig.ignoreReadConfig) {
             //恢复阅读界面配置
             File(path, ReadBookConfig.configFileName).takeIf {
@@ -243,19 +325,22 @@ object Restore {
                 AppLog.put("恢复阅读界面出错\n${it.localizedMessage}", it)
             }
         }
-        //AppWebDav.downBgs()
+
+        // 恢复SharedPreferences配置（应用主配置）
         appCtx.getSharedPreferences(path, "config")?.all?.let { map ->
             val edit = appCtx.defaultSharedPreferences.edit()
 
             map.forEach { (key, value) ->
                 if (BackupConfig.keyIsNotIgnore(key)) {
                     when (key) {
+                        // WebDav密码需要解密
                         PreferKey.webDavPassword -> {
                             kotlin.runCatching {
                                 aes.decryptStr(value.toString())
                             }.getOrNull()?.let {
                                 edit.putString(key, it)
                             } ?: let {
+                                // 解密失败时，如果本地密码为空则使用备份中的值
                                 if (appCtx.getPrefString(PreferKey.webDavPassword)
                                         .isNullOrBlank()
                                 ) {
@@ -276,6 +361,8 @@ object Restore {
             }
             edit.apply()
         }
+
+        // 恢复视频播放配置
         appCtx.getSharedPreferences(path, "videoConfig")?.all?.let { map ->
             appCtx.getSharedPreferences(VIDEO_PREF_NAME, Context.MODE_PRIVATE).edit().apply {
                 map.forEach { (key, value) ->
@@ -290,6 +377,8 @@ object Restore {
                 apply()
             }
         }
+
+        // 应用阅读配置
         ReadBookConfig.apply {
             comicStyleSelect = appCtx.getPrefInt(PreferKey.comicStyleSelect)
             readStyleSelect = appCtx.getPrefInt(PreferKey.readStyleSelect)
@@ -298,7 +387,10 @@ object Restore {
             hideNavigationBar = appCtx.getPrefBoolean(PreferKey.hideNavigationBar)
             autoReadSpeed = appCtx.getPrefInt(PreferKey.autoReadSpeed, 46)
         }
+
         appCtx.toastOnUi(R.string.restore_success)
+
+        // 应用主题和图标变更
         withContext(Main) {
             delay(100)
             if (!BuildConfig.DEBUG) {
@@ -308,6 +400,14 @@ object Restore {
         }
     }
 
+    /**
+     * 从JSON文件读取列表数据
+     * 
+     * @param T 数据类型
+     * @param path 备份目录路径
+     * @param fileName JSON文件名
+     * @return 解析后的列表，文件不存在或解析失败返回null
+     */
     private inline fun <reified T> fileToListT(path: String, fileName: String): List<T>? {
         try {
             val file = File(path, fileName)

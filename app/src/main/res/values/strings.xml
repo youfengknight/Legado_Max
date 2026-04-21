@@ -667,6 +667,7 @@
     <string name="change_icon_error">The icon is a vector icon, which was not supported before Android 8.0</string>
     <string name="aloud_config">Speech settings</string>
     <string name="main_activity">Start page</string>
+    <string name="enhanced_features">Enhanced Features</string>
     <string name="selectText">Long Tap to select text</string>
     <string name="header">Header</string>
     <string name="main_body">Content</string>
@@ -1397,4 +1398,11 @@
     <string name="input_is_empty">输入不能为空</string>
     <string name="debug_request_src">请求体源码</string>
     <string name="debug_response_src">响应体源码</string>
+    <string name="debug_user_agent">User-Agent</string>
+    <string name="debug_ua_default">默认</string>
+    <string name="debug_ua_chrome_pc">Chrome PC</string>
+    <string name="debug_ua_chrome_mobile">Chrome Mobile</string>
+    <string name="debug_ua_safari_ios">Safari iOS</string>
+    <string name="debug_ua_firefox">Firefox</string>
+    <string name="debug_ua_custom">自定义</string>
 </resources>
