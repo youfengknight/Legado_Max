@@ -1138,6 +1138,7 @@
     <string name="view_backup_info_s">查看备份文件内容与大小</string>
     <string name="view_backup_info">备份信息</string>
     <string name="no_backup_file">未找到备份文件</string>
+    <string name="no_backup_data">暂无备份数据</string>
     <string name="parse_backup_failed">解析备份文件失败</string>
     <string name="webdav_application_authorization_error">webDav应用验证失败</string>
     <string name="load_word_count">加载字数</string>

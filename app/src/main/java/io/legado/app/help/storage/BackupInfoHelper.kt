@@ -1,18 +1,16 @@
 package io.legado.app.help.storage
 
-import io.legado.app.help.config.AppConfig
+import io.legado.app.data.appDb
+import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.model.BookCover
-import io.legado.app.utils.FileUtils
-import io.legado.app.utils.isContentScheme
 import splitties.init.appCtx
 import java.io.File
-import java.util.zip.ZipFile
 
 /**
- * 备份信息解析工具类
- * 用于解析本地备份ZIP文件，获取文件列表和大小信息
+ * 备份信息工具类
+ * 直接统计当前会备份的数据，不需要解析ZIP文件
  */
 object BackupInfoHelper {
 
@@ -25,19 +23,11 @@ object BackupInfoHelper {
         val size: Long
     )
 
-    /**
-     * 备份概览信息
-     */
     data class BackupOverview(
-        val zipFileName: String,
-        val zipFileSize: Long,
-        val createTime: Long,
-        val items: List<BackupFileInfo>
+        val items: List<BackupFileInfo>,
+        val totalSize: Long
     )
 
-    /**
-     * 分类信息
-     */
     data class CategoryInfo(
         val name: String,
         val icon: String,
@@ -85,74 +75,70 @@ object BackupInfoHelper {
     )
 
     /**
-     * 获取本地备份文件列表
-     * @return 备份文件列表，按修改时间倒序
+     * 获取备份信息概览
+     * 直接统计当前会备份的数据
      */
-    fun getBackupFiles(): List<File> {
-        val files = mutableListOf<File>()
-
-        // 默认备份目录
-        appCtx.getExternalFilesDir(null)?.let { dir ->
-            if (dir.exists()) {
-                dir.listFiles()?.filter {
-                    it.name.startsWith("backup") && it.name.endsWith(".zip")
-                }?.let { files.addAll(it) }
-            }
-        }
-
-        // 用户配置的备份路径
-        val backupPath = AppConfig.backupPath
-        if (!backupPath.isNullOrBlank() && !backupPath.isContentScheme()) {
-            val customDir = File(backupPath)
-            if (customDir.exists() && customDir.isDirectory) {
-                customDir.listFiles()?.filter {
-                    it.name.startsWith("backup") && it.name.endsWith(".zip")
-                }?.let { files.addAll(it) }
-            }
-        }
-
-        return files.sortedByDescending { it.lastModified() }
-    }
-
-    /**
-     * 获取最新备份文件
-     */
-    fun getLatestBackupFile(): File? {
-        return getBackupFiles().firstOrNull()
-    }
-
-    /**
-     * 解析备份ZIP，获取文件列表
-     */
-    fun parseBackupZip(zipFile: File): BackupOverview? {
-        if (!zipFile.exists()) return null
-
+    fun getBackupOverview(): BackupOverview {
         val items = mutableListOf<BackupFileInfo>()
+        var totalSize = 0L
 
-        try {
-            ZipFile(zipFile).use { zip ->
-                zip.entries().asSequence().forEach { entry ->
-                    if (!entry.isDirectory) {
-                        val fileName = entry.name
-                        val displayName = displayNameMap[fileName] ?: fileName
-                        items.add(BackupFileInfo(
-                            fileName = fileName,
-                            displayName = displayName,
-                            size = entry.size
-                        ))
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            return null
+        // 数据库数据统计
+        val dbItems = listOf(
+            Pair("bookshelf.json") { appDb.bookDao.all.size },
+            Pair("bookmark.json") { appDb.bookmarkDao.all.size },
+            Pair("bookGroup.json") { appDb.bookGroupDao.all.size },
+            Pair("bookSource.json") { appDb.bookSourceDao.all.size },
+            Pair("rssSources.json") { appDb.rssSourceDao.all.size },
+            Pair("rssStar.json") { appDb.rssStarDao.all.size },
+            Pair("replaceRule.json") { appDb.replaceRuleDao.all.size },
+            Pair("readRecord.json") { appDb.readRecordDao.all.size },
+            Pair("searchHistory.json") { appDb.searchKeywordDao.all.size },
+            Pair("sourceSub.json") { appDb.ruleSubDao.all.size },
+            Pair("txtTocRule.json") { appDb.txtTocRuleDao.all.size },
+            Pair("httpTTS.json") { appDb.httpTTSDao.all.size },
+            Pair("keyboardAssists.json") { appDb.keyboardAssistsDao.all.size },
+            Pair("dictRule.json") { appDb.dictRuleDao.all.size },
+            Pair("servers.json") { appDb.serverDao.all.size }
+        )
+
+        dbItems.forEach { (fileName, countProvider) ->
+            val count = countProvider()
+            val displayName = displayNameMap[fileName] ?: fileName
+            // 估算JSON大小：每条记录约200字节
+            val estimatedSize = count * 200L
+            totalSize += estimatedSize
+            items.add(BackupFileInfo(fileName, displayName, estimatedSize))
         }
 
-        return BackupOverview(
-            zipFileName = zipFile.name,
-            zipFileSize = zipFile.length(),
-            createTime = zipFile.lastModified(),
-            items = items.sortedByDescending { it.size }
+        // 配置文件统计
+        val configFiles = listOf(
+            ReadBookConfig.configFileName,
+            ReadBookConfig.shareConfigFileName,
+            ThemeConfig.configFileName,
+            BookCover.configFileName,
+            "config.xml",
+            "videoConfig.xml"
         )
+
+        configFiles.forEach { fileName ->
+            val file = File(appCtx.filesDir, fileName)
+            val size = if (file.exists()) file.length() else 0L
+            if (size > 0) {
+                totalSize += size
+                val displayName = displayNameMap[fileName] ?: fileName
+                items.add(BackupFileInfo(fileName, displayName, size))
+            }
+        }
+
+        // 直链上传配置
+        DirectLinkUpload.getConfig()?.let {
+            val fileName = DirectLinkUpload.ruleFileName
+            val size = it.length.toLong()
+            totalSize += size
+            items.add(BackupFileInfo(fileName, "直链上传配置", size))
+        }
+
+        return BackupOverview(items, totalSize)
     }
 
     /**
@@ -202,13 +188,5 @@ object BackupInfoHelper {
             size < 1024 * 1024 -> String.format("%.1f KB", size / 1024.0)
             else -> String.format("%.2f MB", size / (1024.0 * 1024))
         }
-    }
-
-    /**
-     * 格式化时间
-     */
-    fun formatTime(timestamp: Long): String {
-        return java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-            .format(java.util.Date(timestamp))
     }
 }

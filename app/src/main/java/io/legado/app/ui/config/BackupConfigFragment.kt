@@ -263,7 +263,7 @@ class BackupConfigFragment : PreferenceFragment(),
      * 显示备份信息
      */
     private fun showBackupInfo() {
-        showDialogFragment<BackupInfoDialog>()
+        BackupInfoDialog.newInstance().show(childFragmentManager, "backupInfo")
     }
 
 

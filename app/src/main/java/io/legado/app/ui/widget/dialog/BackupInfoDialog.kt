@@ -17,13 +17,12 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 /**
  * 备份信息查看对话框
- * 显示备份ZIP中包含的文件列表和大小
+ * 显示当前会备份的数据统计
  */
 class BackupInfoDialog : BaseDialogFragment(R.layout.dialog_recycler_view) {
 
     private val binding by viewBinding(DialogRecyclerViewBinding::bind)
     private val adapter by lazy { BackupInfoAdapter(requireContext()) }
-    private var backupFile: java.io.File? = null
 
     override fun onStart() {
         super.onStart()
@@ -40,19 +39,11 @@ class BackupInfoDialog : BaseDialogFragment(R.layout.dialog_recycler_view) {
     }
 
     private fun loadBackupInfo() {
-        val file = backupFile ?: BackupInfoHelper.getLatestBackupFile()
+        val overview = BackupInfoHelper.getBackupOverview()
 
-        if (file == null || !file.exists()) {
+        if (overview.items.isEmpty()) {
             binding.tvMsg.visibility = View.VISIBLE
-            binding.tvMsg.text = getString(R.string.no_backup_file)
-            return
-        }
-
-        val overview = BackupInfoHelper.parseBackupZip(file)
-
-        if (overview == null) {
-            binding.tvMsg.visibility = View.VISIBLE
-            binding.tvMsg.text = getString(R.string.parse_backup_failed)
+            binding.tvMsg.text = getString(R.string.no_backup_data)
             return
         }
 
@@ -60,10 +51,8 @@ class BackupInfoDialog : BaseDialogFragment(R.layout.dialog_recycler_view) {
 
         // 添加头部信息
         items.add(BackupInfoItem.Header(
-            fileName = overview.zipFileName,
-            fileSize = BackupInfoHelper.formatSize(overview.zipFileSize),
-            createTime = BackupInfoHelper.formatTime(overview.createTime),
-            itemCount = overview.items.size
+            itemCount = overview.items.size,
+            totalSize = BackupInfoHelper.formatSize(overview.totalSize)
         ))
 
         // 按分类添加
@@ -88,22 +77,15 @@ class BackupInfoDialog : BaseDialogFragment(R.layout.dialog_recycler_view) {
     }
 
     companion object {
-        fun newInstance(file: java.io.File? = null): BackupInfoDialog {
-            return BackupInfoDialog().apply {
-                backupFile = file
-            }
+        fun newInstance(): BackupInfoDialog {
+            return BackupInfoDialog()
         }
     }
 
-    /**
-     * 备份信息列表项
-     */
     sealed class BackupInfoItem {
         data class Header(
-            val fileName: String,
-            val fileSize: String,
-            val createTime: String,
-            val itemCount: Int
+            val itemCount: Int,
+            val totalSize: String
         ) : BackupInfoItem()
 
         data class Category(
@@ -120,23 +102,14 @@ class BackupInfoDialog : BaseDialogFragment(R.layout.dialog_recycler_view) {
         ) : BackupInfoItem()
     }
 
-    /**
-     * 适配器
-     */
     class BackupInfoAdapter(context: Context) :
         RecyclerAdapter<BackupInfoItem, ItemBackupCategoryBinding>(context) {
 
-        companion object {
-            const val TYPE_HEADER = 0
-            const val TYPE_CATEGORY = 1
-            const val TYPE_FILE = 2
-        }
-
         override fun getItemViewType(item: BackupInfoItem, position: Int): Int {
             return when (item) {
-                is BackupInfoItem.Header -> TYPE_HEADER
-                is BackupInfoItem.Category -> TYPE_CATEGORY
-                is BackupInfoItem.File -> TYPE_FILE
+                is BackupInfoItem.Header -> 0
+                is BackupInfoItem.Category -> 1
+                is BackupInfoItem.File -> 2
             }
         }
 
@@ -161,8 +134,8 @@ class BackupInfoDialog : BaseDialogFragment(R.layout.dialog_recycler_view) {
             binding.root.visibility = View.VISIBLE
             binding.apply {
                 tvIcon.text = "📦"
-                tvTitle.text = item.fileName
-                tvSubtitle.text = "${item.fileSize} · ${item.createTime}"
+                tvTitle.text = "备份数据统计"
+                tvSubtitle.text = "预估大小: ${item.totalSize}"
                 tvCount.text = "${item.itemCount} 项"
                 tvSize.visibility = View.GONE
             }

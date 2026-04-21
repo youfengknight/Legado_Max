@@ -1148,6 +1148,7 @@
     <string name="view_backup_info_s">View backup file contents and sizes</string>
     <string name="view_backup_info">Backup Info</string>
     <string name="no_backup_file">No backup file found</string>
+    <string name="no_backup_data">No backup data</string>
     <string name="parse_backup_failed">Failed to parse backup file</string>
     <string name="webdav_application_authorization_error">Fail to authorize WebDav application</string>
     <string name="respondTime">respondTime: %1$d ms</string>
