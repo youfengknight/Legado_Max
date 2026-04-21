@@ -52,6 +52,8 @@ import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
 import io.legado.app.help.webView.WebJsExtensions.Companion.wrapUseWebHtml
 import io.legado.app.help.webView.WebViewPool
+import io.legado.app.help.webView.WebViewPool.fitInlineContent
+import io.legado.app.help.webView.WebViewPool.prepareForInlineContent
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.lib.theme.accentColor
@@ -722,6 +724,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         val pooledWebView = WebViewPool.acquire(context)
         val webView = pooledWebView.realWebView
         webView.onResume()
+        prepareForInlineContent(webView)
         webView.webViewClient = ExploreHtmlWebViewClient(container, source, pageJs)
         webView.addJavascriptInterface(WebCacheManager, nameCache)
         source?.let {
@@ -993,8 +996,10 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
 
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            container.post {
-                container.requestLayout()
+            view?.let {
+                fitInlineContent(it) {
+                    container.requestLayout()
+                }
             }
         }
     }

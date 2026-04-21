@@ -58,6 +58,8 @@ import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
 import io.legado.app.help.webView.WebJsExtensions.Companion.wrapUseWebHtml
 import io.legado.app.help.webView.WebViewPool
+import io.legado.app.help.webView.WebViewPool.fitInlineContent
+import io.legado.app.help.webView.WebViewPool.prepareForInlineContent
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.accentColor
@@ -536,8 +538,10 @@ class BookInfoActivity :
         }
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            view?.post {
-                binding.tvIntroContainer.requestLayout()
+            view?.let {
+                fitInlineContent(it) {
+                    binding.tvIntroContainer.requestLayout()
+                }
             }
         }
     }
@@ -555,6 +559,7 @@ class BookInfoActivity :
                 val pooledWebView = WebViewPool.acquire(this)
                 val webView = pooledWebView.realWebView
                 webView.onResume()
+                prepareForInlineContent(webView)
                 webView.webViewClient = CustomWebViewClient(viewModel.bookSource)
                 webView.addJavascriptInterface(WebCacheManager, nameCache)
                 viewModel.bookSource?.let {
@@ -565,6 +570,7 @@ class BookInfoActivity :
                 pooledWebView
             }
             val webView = pooledWebView.realWebView
+            prepareForInlineContent(webView)
             if (initIntroView || this.pooledWebView == null) {
                 initIntroView = false
                 this.pooledWebView = pooledWebView

@@ -123,6 +123,37 @@ object WebViewPool {
         }
     }
 
+    fun prepareForInlineContent(webView: WebView) {
+        val layoutParams = (webView.layoutParams ?: ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )).also {
+            it.width = ViewGroup.LayoutParams.MATCH_PARENT
+            // Reset stale measured height before loading shorter HTML into a reused WebView.
+            it.height = 1
+        }
+        webView.layoutParams = layoutParams
+        webView.scrollTo(0, 0)
+        webView.requestLayout()
+    }
+
+    fun fitInlineContent(webView: WebView, afterLayout: (() -> Unit)? = null) {
+        webView.post {
+            val contentHeight = (webView.contentHeight * webView.resources.displayMetrics.density).toInt()
+            val targetHeight = contentHeight.takeIf { it > 1 } ?: ViewGroup.LayoutParams.WRAP_CONTENT
+            val layoutParams = (webView.layoutParams ?: ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                targetHeight
+            )).also {
+                it.width = ViewGroup.LayoutParams.MATCH_PARENT
+                it.height = targetHeight
+            }
+            webView.layoutParams = layoutParams
+            webView.requestLayout()
+            afterLayout?.invoke()
+        }
+    }
+
     private fun createNewWebView(): PooledWebView {
         val webView = VisibleWebView(MutableContextWrapper(appCtx))
         preInitWebView(webView)
