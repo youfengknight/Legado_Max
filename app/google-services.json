@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:697663952276:android:c82ebb87ea51ffb03a2b81",
         "android_client_info": {
-          "package_name": "io.legado.app.debug"
+          "package_name": "io.legado.app.yuedu.debug"
         }
       },
       "oauth_client": [],
@@ -28,7 +28,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:697663952276:android:97b22ebf33dd827b3a2b81",
         "android_client_info": {
-          "package_name": "io.legado.app.release"
+          "package_name": "io.legado.app.yuedu.release"
         }
       },
       "oauth_client": [],
@@ -47,7 +47,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:697663952276:android:9df7094e5a3fa0813a2b81",
         "android_client_info": {
-          "package_name": "io.legado.app.releaseS"
+          "package_name": "io.legado.app.yuedu.releaseS"
         }
       },
       "oauth_client": [],
