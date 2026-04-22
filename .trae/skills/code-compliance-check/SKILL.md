@@ -1,6 +1,6 @@
 ---
 name: "code-compliance-check"
-description: "Automatically validates code changes for compliance. Invokes after completing any code modification task to ensure quality, logging, and bug-free delivery."
+description: "Automatically validates code changes for compliance. **MUST invoke IMMEDIATELY after completing ANY code modification task** to ensure quality, logging, and bug-free delivery."
 ---
 
 # 代码修改自动合规校验

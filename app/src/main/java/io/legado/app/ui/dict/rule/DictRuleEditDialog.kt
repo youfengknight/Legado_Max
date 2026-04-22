@@ -4,12 +4,9 @@ import android.app.Activity.RESULT_OK
 import android.app.Application
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.Toolbar
@@ -19,24 +16,15 @@ import io.legado.app.base.BaseDialogFragment
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.DictRule
-import io.legado.app.databinding.DialogDictRuleDebugBinding
 import io.legado.app.databinding.DialogDictRuleEditBinding
-import io.legado.app.help.config.DictDebugConfig
-import io.legado.app.model.analyzeRule.AnalyzeUrl
-import io.legado.app.model.analyzeRule.AnalyzeRule
-import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.code.CodeEditActivity
 import io.legado.app.ui.widget.code.addJsPattern
 import io.legado.app.ui.widget.code.addJsonPattern
 import io.legado.app.ui.widget.code.addLegadoPattern
-import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
 
 class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, true),
     Toolbar.OnMenuItemClickListener {
@@ -136,94 +124,8 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
         }
     }
 
-    /**
-     * 显示调试对话框
-     * 使用可滚动的 TextView 显示结果，并支持下拉历史记录
-     * 输入框按回车键或点击搜索按钮触发搜索
-     */
     private fun showDebugDialog(dictRule: DictRule) {
-        // 初始化 ViewBinding
-        val dialogBinding = DialogDictRuleDebugBinding.inflate(LayoutInflater.from(requireContext()))
-
-        // 加载搜索历史记录并设置到输入框的下拉列表
-        val history = DictDebugConfig.getSearchHistory()
-        dialogBinding.inputView.setFilterValues(history)
-
-        // 存储 URL 原始响应和解析结果，用于三点菜单查看源码
-        var urlSrc: String = ""
-        var resultSrc: String = ""
-
-        // 搜索操作的 Lambda 表达式
-        val performSearch = {
-            val word = dialogBinding.inputView.text.toString()
-            if (word.isBlank()) {
-                toastOnUi("关键词不能为空")
-            } else {
-                DictDebugConfig.addSearchHistory(word)
-                dialogBinding.viewResult.text = "正在搜索..."
-                viewModel.debugSearch(dictRule, word) { result, urlResponse ->
-                    urlSrc = urlResponse
-                    resultSrc = result
-                    dialogBinding.viewResult.text = resultSrc
-                }
-            }
-        }
-
-        // 输入框回车键监听，触發搜索
-        dialogBinding.inputView.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                performSearch()
-                true
-            } else {
-                false
-            }
-        }
-
-        // 搜索按钮点击事件
-        dialogBinding.btnSearch.setOnClickListener {
-            performSearch()
-        }
-
-        // 配置 Toolbar 和菜单
-        dialogBinding.toolBar.setBackgroundColor(primaryColor)
-        dialogBinding.toolBar.inflateMenu(R.menu.dict_rule_debug)
-        dialogBinding.toolBar.menu.applyTint(requireContext())
-        // 菜单点击事件处理：查看 URL 源码和结果源码
-        dialogBinding.toolBar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.menu_url_src -> {
-                    if (urlSrc.isNotEmpty()) {
-                        showDialogFragment(TextDialog("URL源码", urlSrc))
-                    } else {
-                        toastOnUi("请先执行搜索")
-                    }
-                }
-                R.id.menu_result_src -> {
-                    if (resultSrc.isNotEmpty()) {
-                        showDialogFragment(TextDialog("结果源码", resultSrc))
-                    } else {
-                        toastOnUi("请先执行搜索")
-                    }
-                }
-            }
-            true
-        }
-
-        // 创建并显示对话框
-        alert {
-            customView { dialogBinding.root }
-            okButton {
-                performSearch()
-            }
-            cancelButton()
-        }.apply {
-            setOnShowListener {
-                dialog?.window?.setLayout(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            }
-        }
+        showDialogFragment(DictRuleDebugDialog(dictRule))
     }
 
     private fun upRuleView(dictRule: DictRule?) {
@@ -308,43 +210,6 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
                 success.invoke(it)
             }.onError {
                 context.toastOnUi("格式不对")
-            }
-        }
-
-        /**
-         * 调试字典规则
-         * 执行搜索并通过回调返回结果和URL源码
-         * @param dictRule 字典规则
-         * @param word 搜索关键词
-         * @param onSuccess 成功回调 (result, urlResponse)
-         */
-        fun debugSearch(
-            dictRule: DictRule,
-            word: String,
-            onSuccess: (String, String) -> Unit
-        ) {
-            execute {
-                val analyzeUrl = AnalyzeUrl(
-                    dictRule.urlRule,
-                    key = word,
-                    coroutineContext = currentCoroutineContext()
-                )
-                val response = analyzeUrl.getStrResponseAwait()
-                val body = response.body ?: ""
-                // 根据 showRule 判断是否需要解析
-                val result = if (dictRule.showRule.isBlank()) {
-                    body
-                } else {
-                    val analyzeRule = AnalyzeRule().setCoroutineContext(currentCoroutineContext())
-                    analyzeRule.setRuleName(dictRule.name)
-                    analyzeRule.getString(dictRule.showRule, mContent = body) ?: body
-                }
-                result to body
-            }.onSuccess {
-                // 回调返回解析结果和原始响应
-                onSuccess.invoke(it.first, it.second)
-            }.onError {
-                context.toastOnUi("调试失败: ${it.localizedMessage}")
             }
         }
 

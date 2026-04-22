@@ -370,33 +370,36 @@ object WebViewPool {
                     ?: 0
                 // 取 JS 高度和备用高度的最大值作为目标高度
                 val targetHeight = max(jsHeight, fallbackHeight)
-                // 目标高度无效时直接回调
-                if (targetHeight <= 1) {
-                    afterLayout?.invoke()
-                    return@evaluateJavascript
+                // 目标高度无效时使用 WRAP_CONTENT
+                val finalHeight = if (targetHeight <= 1) {
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                } else {
+                    targetHeight
                 }
                 // 高度未变化时直接回调
-                if (targetHeight == currentHeight) {
+                if (finalHeight == currentHeight) {
                     afterLayout?.invoke()
                     return@evaluateJavascript
                 }
                 // 计算高度差
-                val heightDiff = kotlin.math.abs(targetHeight - currentHeight)
-                if (heightDiff < 50) {
-                    // 高度变化较小，直接设置，不使用动画
+                val heightDiff = kotlin.math.abs(
+                    if (finalHeight == ViewGroup.LayoutParams.WRAP_CONTENT) 0 else finalHeight - currentHeight
+                )
+                if (heightDiff < 50 || finalHeight == ViewGroup.LayoutParams.WRAP_CONTENT) {
+                    // 高度变化较小或使用 WRAP_CONTENT，直接设置，不使用动画
                     val layoutParams = (webView.layoutParams ?: ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
-                        targetHeight
+                        finalHeight
                     )).also {
                         it.width = ViewGroup.LayoutParams.MATCH_PARENT
-                        it.height = targetHeight
+                        it.height = finalHeight
                     }
                     webView.layoutParams = layoutParams
                     webView.requestLayout()
                     afterLayout?.invoke()
                 } else {
                     // 高度变化较大，使用动画平滑过渡
-                    android.animation.ValueAnimator.ofInt(currentHeight, targetHeight).apply {
+                    android.animation.ValueAnimator.ofInt(currentHeight, finalHeight).apply {
                         this.duration = duration
                         // 动画更新监听：只更新高度值，不调用 requestLayout
                         addUpdateListener { animator ->
