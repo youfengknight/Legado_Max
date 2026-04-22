@@ -1,31 +1,84 @@
-name: 自动打包APK
+name: Release Build 双包打包
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ master ]
 
 jobs:
-  build:
+  prepare:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    outputs:
+      version: ${{ steps.set-ver.outputs.version }}
+    steps:
+      - id: set-ver
+        run: |
+          echo "version=$(date -d "8 hour" -u +3.%y.%m%d%H)" >> $GITHUB_OUTPUT
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 这里一次打 2 个包：app + app·S
+        product: [ app, app·S ]
+      fail-fast: false
+
+    env:
+      product: ${{ matrix.product }}
+      VERSION: ${{ needs.prepare.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
+          distribution: 'temurin'
           java-version: 17
-          distribution: temurin
 
-      - name: Grant execute permission
-        run: chmod +x gradlew
+      # ==============================================
+      # 重点：自动给 app·S 改 包名 + 软件名
+      # ==============================================
+      - name: 修改包名 & 应用名 (仅对 app·S 生效)
+        if: env.product == 'app·S'
+        run: |
+          # 1. 修改包名（自动加 .a）
+          sed -i 's/applicationId "io.legado"/applicationId "io.legado.a"/' app/build.gradle.kts
+          sed -i 's/applicationIdSuffix \"\"/applicationIdSuffix \".a"/' app/build.gradle.kts
 
-      - name: 构建打包APK
-        run: ./gradlew assembleAppRelease
+          # 2. 修改 APP 名称，自动加 ·S
+          sed -i 's/app_name\">阅读/app_name\">阅读·S/' app/src/main/res/values/strings.xml
+          sed -i 's/app_name">阅读/app_name">阅读·S/' app/src/main/res/values-zh-rCN/strings.xml
 
-      - name: 上传打包好的文件
-        uses: actions/upload-artifact@v4
+      - name: 统一版本号
+        run: |
+          sed "/def version/c def version = \"${{ env.VERSION }}\"" app/build.gradle.kts -i
+
+      - name: 配置 Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: 开始打包
+        run: |
+          chmod +x gradlew
+          ./gradlew assemble${{ env.product }}Release --parallel
+
+      - name: 整理 APK
+        run: |
+          mkdir -p apk/
+          cp app/build/outputs/apk/${{ env.product }}/release/*.apk apk/
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v7
         with:
-          name: legado-apk
-          path: app/build/outputs/apk/app/release/*.apk
+          name: 阅读_${{ env.product }}_${{ env.VERSION }}
+          path: apk/*.apk
+
+      - name: 发布到 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: 阅读双包版 ${{ env.VERSION }}
+          tag_name: ${{ env.VERSION }}
+          body: "自动打包：正常版 + ·S 版（双开共存）"
+          files: apk/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

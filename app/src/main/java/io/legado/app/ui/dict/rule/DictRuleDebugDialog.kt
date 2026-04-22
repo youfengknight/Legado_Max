@@ -21,6 +21,11 @@ import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 
+/**
+ * 字典规则调试对话框
+ * 用于调试字典规则，输入关键词后显示搜索结果
+ * 使用 BaseDialogFragment 实现以支持 layout_weight 正常工作
+ */
 class DictRuleDebugDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_debug) {
 
     private val binding by viewBinding(DialogDictRuleDebugBinding::bind)
@@ -52,6 +57,10 @@ class DictRuleDebugDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_debug
         initInputView()
     }
 
+    /**
+     * 初始化工具栏
+     * 配置菜单项用于查看 URL 源码和结果源码
+     */
     private fun initToolBar() {
         binding.toolBar.setBackgroundColor(primaryColor)
         binding.toolBar.inflateMenu(R.menu.dict_rule_debug)
@@ -77,6 +86,10 @@ class DictRuleDebugDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_debug
         }
     }
 
+    /**
+     * 初始化输入框
+     * 加载搜索历史记录，设置回车键和搜索按钮监听
+     */
     private fun initInputView() {
         val history = DictDebugConfig.getSearchHistory()
         binding.inputView.setFilterValues(history)
@@ -95,6 +108,10 @@ class DictRuleDebugDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_debug
         }
     }
 
+    /**
+     * 执行搜索
+     * 根据字典规则构造 URL 请求，解析结果并显示
+     */
     private fun performSearch() {
         val word = binding.inputView.text.toString()
         val rule = dictRule ?: return
