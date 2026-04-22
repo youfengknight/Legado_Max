@@ -72,6 +72,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.activity
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
+import io.legado.app.utils.invisible
 import io.legado.app.utils.longSnackbar
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.removeLastElement
@@ -792,7 +793,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
 
     /**
      * 绑定 WebView 显示 useweb 内容
-     * 处理流程：解析HTML -> 构建注入JS -> 获取WebView -> 设置监听 -> 加载内容
+     * 处理流程：解析HTML -> 构建注入JS -> 获取WebView -> 显示加载圈 -> 加载内容 -> 加载完成后显示
      */
     private fun bindExploreWebView(
         container: FrameLayout,
@@ -816,12 +817,14 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         val webView = pooledWebView.realWebView
         webView.onResume()
         val cachedHeight = exploreWebViewHeightCache[pageKey]?.takeIf { it > 1 }
-        prepareForInlineContent(webView, cachedHeight ?: 0)
+        val loadingHeight = 120.dpToPx()
+        prepareForInlineContent(webView, cachedHeight ?: loadingHeight)
         installInlineContentRefitOnTouch(webView) {
             container.requestLayout()
         }
         val loadingIndicator = createLoadingIndicator(container)
         container.addView(loadingIndicator)
+        webView.invisible()
         webView.webViewClient = ExploreHtmlWebViewClient(
             container,
             source,
@@ -847,7 +850,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         return ProgressBar(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
+                120.dpToPx(),
                 android.view.Gravity.CENTER
             )
             indeterminateTintList = android.content.res.ColorStateList.valueOf(context.accentColor)
@@ -1233,12 +1236,13 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             view?.let { webView ->
-                loadingIndicator.gone()
                 WebViewPool.fitInlineContentSmooth(webView, WebViewPool.currentInlineContentGeneration(webView), afterLayout = {
                     val height = webView.layoutParams?.height ?: 0
                     if (height > 1) {
                         exploreWebViewHeightCache.put(pageKey, height)
                     }
+                    loadingIndicator.gone()
+                    webView.visible()
                     container.requestLayout()
                     completePendingScrollToSource(sourceUrl, container)
                 })
