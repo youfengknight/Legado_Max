@@ -22,9 +22,11 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.imeHeight
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
+import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import io.legado.app.ui.widget.dialog.RegexTestDialog
 
 /**
  * 编辑替换规则
@@ -111,7 +113,10 @@ class ReplaceEditActivity :
                 setResult(RESULT_OK)
                 finish()
             }
-
+            R.id.menu_regex_test -> {
+                val rule = getReplaceRule()
+                showDialogFragment(RegexTestDialog(rule.pattern, rule.replacement, rule.isRegex))
+            }
             R.id.menu_copy_rule -> sendToClip(GSON.toJson(getReplaceRule()))
             R.id.menu_paste_rule -> viewModel.pasteRule {
                 upReplaceView(it)

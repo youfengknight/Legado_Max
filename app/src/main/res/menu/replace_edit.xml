@@ -17,6 +17,11 @@
         app:showAsAction="always" />
 
     <item
+        android:id="@+id/menu_regex_test"
+        android:title="@string/debug_regex_test"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_copy_rule"
         android:title="@string/copy_rule"
         app:showAsAction="never" />

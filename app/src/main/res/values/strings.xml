@@ -1432,4 +1432,21 @@
     <string name="debug_ua_safari_ios">Safari iOS</string>
     <string name="debug_ua_firefox">Firefox</string>
     <string name="debug_ua_custom">自定义</string>
+    
+    <!-- Regex Test Dialog -->
+    <string name="test_input">测试输入</string>
+    <string name="match_result">匹配结果</string>
+    <string name="realtime_preview">实时预览</string>
+    <string name="replace_preview">替换预览</string>
+    <string name="pattern_empty">正则表达式不能为空</string>
+    <string name="regex_syntax_error">正则语法错误: %s</string>
+    <string name="no_match_found">正则表达式有效，但未找到匹配</string>
+    <string name="regex_valid_match_success">正则表达式有效，匹配成功</string>
+    <string name="match_error">匹配出错</string>
+    <string name="match_count_format">%d 处匹配</string>
+    <string name="match_times">匹配次数: %d 次</string>
+    <string name="match_position">位置 %1$d: 索引 %2$d-%3$d</string>
+    <string name="more_matches">还有 %d 处匹配</string>
+    <string name="zero_match">0 处匹配</string>
+    <string name="input_test_text_hint">请输入测试文本</string>
 </resources>

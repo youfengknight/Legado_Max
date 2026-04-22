@@ -6,6 +6,7 @@
 .kotlin-home
 local.properties
 .DS_Store
+.trae
 /build
 build/
 /captures
