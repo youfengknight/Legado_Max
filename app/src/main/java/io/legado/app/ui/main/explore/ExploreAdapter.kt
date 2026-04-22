@@ -110,6 +110,19 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
     private val activeWebViews = linkedMapOf<FrameLayout, PooledWebView>()
     private var saveInfoMapJob: Job? = null
 
+    private fun completePendingScrollToSource(sourceUrl: String?, anchor: View? = null) {
+        if (sourceUrl == null || scrollToSourceUrl != sourceUrl) {
+            return
+        }
+        val scrollAction = {
+            findSourcePosition(sourceUrl)?.let(callBack::scrollTo)
+            if (scrollToSourceUrl == sourceUrl) {
+                scrollToSourceUrl = null
+            }
+        }
+        anchor?.post(scrollAction) ?: scrollAction()
+    }
+
     override fun getViewBinding(parent: ViewGroup): ItemFindBookBinding {
         return ItemFindBookBinding.inflate(inflater, parent, false)
     }
@@ -166,6 +179,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                 
                 // 显示加载动画
                 rotateLoading.visible()
+                var waitInlineContentScroll = false
                 Coroutine.async(callBack.scope) {
                     // 优先使用缓存的 kinds 数据
                     sourceKinds[item.bookSourceUrl]?.also {
@@ -176,14 +190,17 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                         sourceKinds[item.bookSourceUrl] = it
                     }
                 }.onSuccess { kindList ->
+                    waitInlineContentScroll = kindList.any { it.type == Type.html }
                     upKindList(this@run, item, kindList, item)
                 }.onFinally {
                     rotateLoading.gone()
                     // 处理滚动到指定位置
                     scrollToSourceUrl?.let { sourceUrl ->
-                        findSourcePosition(sourceUrl)?.let(callBack::scrollTo)
                         if (sourceUrl == item.bookSourceUrl) {
-                            scrollToSourceUrl = null
+                            findSourcePosition(sourceUrl)?.let(callBack::scrollTo)
+                            if (!waitInlineContentScroll) {
+                                scrollToSourceUrl = null
+                            }
                         }
                     }
                 }
@@ -770,6 +787,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         )
         container.addView(textView)
         container.visible()
+        completePendingScrollToSource(source?.bookSourceUrl, container)
     }
 
     /**
@@ -811,7 +829,13 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         installInlineContentRefitOnTouch(webView) {
             container.requestLayout()
         }
-        webView.webViewClient = ExploreHtmlWebViewClient(container, source, pageJs, pageKey)
+        webView.webViewClient = ExploreHtmlWebViewClient(
+            container,
+            source,
+            source?.bookSourceUrl,
+            pageJs,
+            pageKey
+        )
         webView.addJavascriptInterface(WebCacheManager, nameCache)
         source?.let {
             webView.addJavascriptInterface(it as BaseSource, nameSource)
@@ -998,9 +1022,10 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                 expandedSourceUrl?.let { sourceUrl ->
                     scrollToSourceUrl = sourceUrl
                     findSourcePosition(sourceUrl)?.let {
-                        callBack.scrollTo(it)
                         notifyItemChanged(it, false)
                     }
+                } ?: run {
+                    scrollToSourceUrl = null
                 }
             }
             // 长按显示菜单
@@ -1158,6 +1183,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
     private inner class ExploreHtmlWebViewClient(
         private val container: FrameLayout,
         private val source: BaseSource?,
+        private val sourceUrl: String?,
         private val pageJs: String,
         private val pageKey: String
     ) : WebViewClient() {
@@ -1207,6 +1233,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
                         exploreWebViewHeightCache.put(pageKey, height)
                     }
                     container.requestLayout()
+                    completePendingScrollToSource(sourceUrl, container)
                 })
             }
         }
