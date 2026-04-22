@@ -17,6 +17,7 @@ import android.widget.AutoCompleteTextView
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatSpinner
@@ -52,10 +53,10 @@ import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
 import io.legado.app.help.webView.WebJsExtensions.Companion.wrapUseWebHtml
 import io.legado.app.help.webView.WebViewPool
-import io.legado.app.help.webView.WebViewPool.fitInlineContent
+import io.legado.app.help.webView.WebViewPool.fitInlineContentSmooth
 import io.legado.app.help.webView.WebViewPool.installInlineContentRefitOnTouch
 import io.legado.app.help.webView.WebViewPool.prepareForInlineContent
-import io.legado.app.help.webView.WebViewPool.scheduleInlineContentFit
+import io.legado.app.help.webView.WebViewPool.currentInlineContentGeneration
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.lib.theme.accentColor
@@ -816,25 +817,20 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         val webView = pooledWebView.realWebView
         container.setBackgroundColor(context.backgroundColor)
         webView.onResume()
-        prepareForInlineContent(webView)
-        exploreWebViewHeightCache[pageKey]?.takeIf { it > 1 }?.let { cachedHeight ->
-            webView.layoutParams = (webView.layoutParams ?: FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                cachedHeight
-            )).also {
-                it.width = FrameLayout.LayoutParams.MATCH_PARENT
-                it.height = cachedHeight
-            }
-        }
+        val cachedHeight = exploreWebViewHeightCache[pageKey]?.takeIf { it > 1 }
+        prepareForInlineContent(webView, cachedHeight ?: 0)
         installInlineContentRefitOnTouch(webView) {
             container.requestLayout()
         }
+        val loadingIndicator = createLoadingIndicator(container)
+        container.addView(loadingIndicator)
         webView.webViewClient = ExploreHtmlWebViewClient(
             container,
             source,
             source?.bookSourceUrl,
             pageJs,
-            pageKey
+            pageKey,
+            loadingIndicator
         )
         webView.addJavascriptInterface(WebCacheManager, nameCache)
         source?.let {
@@ -847,6 +843,17 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         val baseUrl = source?.bookSourceUrl?.takeIf { it.startsWith("http", true) }
         webView.loadDataWithBaseURL(baseUrl, html, "text/html", "utf-8", baseUrl)
         container.visible()
+    }
+
+    private fun createLoadingIndicator(container: FrameLayout): ProgressBar {
+        return ProgressBar(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER
+            )
+            indeterminateTintList = android.content.res.ColorStateList.valueOf(context.accentColor)
+        }
     }
 
     /**
@@ -1185,7 +1192,8 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         private val source: BaseSource?,
         private val sourceUrl: String?,
         private val pageJs: String,
-        private val pageKey: String
+        private val pageKey: String,
+        private val loadingIndicator: ProgressBar
     ) : WebViewClient() {
         private val jsStr = buildString {
             append(buildUseWebInjection(source))
@@ -1226,9 +1234,10 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
 
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            view?.let {
-                scheduleInlineContentFit(it, afterLayout = {
-                    val height = it.layoutParams?.height ?: 0
+            view?.let { webView ->
+                loadingIndicator.gone()
+                WebViewPool.fitInlineContentSmooth(webView, WebViewPool.currentInlineContentGeneration(webView), afterLayout = {
+                    val height = webView.layoutParams?.height ?: 0
                     if (height > 1) {
                         exploreWebViewHeightCache.put(pageKey, height)
                     }

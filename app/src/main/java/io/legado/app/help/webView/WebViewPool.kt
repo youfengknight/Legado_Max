@@ -63,7 +63,7 @@ object WebViewPool {
         return generation
     }
 
-    private fun currentInlineContentGeneration(webView: WebView): Long {
+    fun currentInlineContentGeneration(webView: WebView): Long {
         return (webView.getTag(R.id.inline_content_generation) as? Long) ?: 0L
     }
 
@@ -160,20 +160,25 @@ object WebViewPool {
     /**
      * 准备内联内容 WebView
      * 初始化高度测量代次，设置背景色和滚动属性，重置布局参数
+     * @param initialHeight 初始高度（像素），默认为屏幕高度的 1/3
      */
-    fun prepareForInlineContent(webView: WebView) {
+    fun prepareForInlineContent(webView: WebView, initialHeight: Int = 0) {
         nextInlineContentGeneration(webView)
         webView.setBackgroundColor(webView.context.backgroundColor)
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         webView.isHorizontalScrollBarEnabled = false
         webView.isVerticalScrollBarEnabled = false
+        val defaultHeight = if (initialHeight > 0) {
+            initialHeight
+        } else {
+            (webView.context.resources.displayMetrics.heightPixels * 0.35f).roundToInt()
+        }
         val layoutParams = (webView.layoutParams ?: ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )).also {
             it.width = ViewGroup.LayoutParams.MATCH_PARENT
-            // Reset stale measured height before loading shorter HTML into a reused WebView.
-            it.height = 1
+            it.height = defaultHeight
         }
         webView.layoutParams = layoutParams
         webView.scrollTo(0, 0)
@@ -225,19 +230,97 @@ object WebViewPool {
     }
 
     /**
-     * 调度多次高度测量
-     * 由于 WebView 内容加载时机不确定，需要多次延迟测量以确保高度准确
-     * @param delays 延迟时间数组，默认 [0, 80, 240, 600, 1200] 毫秒
+     * 平滑调整 WebView 高度
+     * 使用 ValueAnimator 实现高度变化的平滑过渡
+     * @param generation 代次标识
+     * @param afterLayout 高度调整完成后的回调
+     * @param duration 动画时长（毫秒），默认 200ms
+     */
+    fun fitInlineContentSmooth(
+        webView: WebView,
+        generation: Long,
+        afterLayout: (() -> Unit)? = null,
+        duration: Long = 200L
+    ) {
+        webView.post {
+            if (currentInlineContentGeneration(webView) != generation) return@post
+            val currentHeight = webView.layoutParams?.height ?: 0
+            val fallbackHeight = (webView.contentHeight * webView.resources.displayMetrics.density)
+                .roundToInt()
+            webView.evaluateJavascript(inlineHeightScript) { result ->
+                if (currentInlineContentGeneration(webView) != generation) return@evaluateJavascript
+                val jsHeight = result
+                    ?.trim('"')
+                    ?.toFloatOrNull()
+                    ?.times(webView.resources.displayMetrics.density)
+                    ?.roundToInt()
+                    ?: 0
+                val targetHeight = max(jsHeight, fallbackHeight)
+                    .takeIf { it > 1 }
+                    ?: ViewGroup.LayoutParams.WRAP_CONTENT
+                val targetHeightInt = if (targetHeight == ViewGroup.LayoutParams.WRAP_CONTENT) {
+                    currentHeight
+                } else {
+                    targetHeight
+                }
+                if (targetHeightInt == currentHeight) {
+                    afterLayout?.invoke()
+                    return@evaluateJavascript
+                }
+                val heightDiff = kotlin.math.abs(targetHeightInt - currentHeight)
+                if (heightDiff < 50) {
+                    val layoutParams = (webView.layoutParams ?: ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        targetHeightInt
+                    )).also {
+                        it.width = ViewGroup.LayoutParams.MATCH_PARENT
+                        it.height = targetHeightInt
+                    }
+                    webView.layoutParams = layoutParams
+                    afterLayout?.invoke()
+                } else {
+                    android.animation.ValueAnimator.ofInt(currentHeight, targetHeightInt).apply {
+                        this.duration = duration
+                        addUpdateListener { animator ->
+                            if (currentInlineContentGeneration(webView) != generation) {
+                                cancel()
+                                return@addUpdateListener
+                            }
+                            val height = animator.animatedValue as Int
+                            webView.layoutParams?.let { lp ->
+                                if (lp.height != height) {
+                                    lp.height = height
+                                    webView.requestLayout()
+                                }
+                            }
+                        }
+                        addListener(object : android.animation.AnimatorListenerAdapter() {
+                            override fun onAnimationEnd(animation: android.animation.Animator) {
+                                if (currentInlineContentGeneration(webView) == generation) {
+                                    afterLayout?.invoke()
+                                }
+                            }
+                        })
+                        start()
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 调度高度测量
+     * 简化测量逻辑，只在内容加载完成后测量一次，避免反复重绘
+     * @param delay 延迟时间（毫秒），默认 300ms
      */
     fun scheduleInlineContentFit(
         webView: WebView,
         afterLayout: (() -> Unit)? = null,
-        delays: LongArray = longArrayOf(0L, 80L, 240L, 600L, 1200L)
+        delays: LongArray = longArrayOf(300L)
     ) {
         val generation = currentInlineContentGeneration(webView)
         delays.forEach { delayMillis ->
             webView.postDelayed({
-                // 安全检查：WebView 已销毁或未附加到窗口时跳过
                 if (webView.handler == null || !webView.isAttachedToWindow) return@postDelayed
                 fitInlineContent(webView, generation, afterLayout)
             }, delayMillis)
