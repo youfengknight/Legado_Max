@@ -30,7 +30,6 @@ import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.lib.dialogs.AndroidAlertBuilder
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.CheckSource
@@ -608,23 +607,23 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
             .getAsString(importRecordKey)
             ?.splitNotBlank(",")
             ?.toMutableList() ?: mutableListOf()
-        alert({ AndroidAlertBuilder(it) }) {
-            val alertBinding = ImportUrlDialogHelper.createBinding(
-                layoutInflater = layoutInflater,
-                context = this@BookSourceActivity,
-                lifecycleOwner = this@BookSourceActivity,
-                cacheUrls = cacheUrls,
-                onUrlsChanged = {
-                    aCache.put(importRecordKey, it.joinToString(","))
-                },
-                openBrowser = { url ->
-                    startActivity<WebViewActivity> {
-                        putExtra("url", url)
-                    }
+        val alertBinding = ImportUrlDialogHelper.createBinding(
+            layoutInflater = layoutInflater,
+            context = this@BookSourceActivity,
+            lifecycleOwner = this@BookSourceActivity,
+            cacheUrls = cacheUrls,
+            onUrlsChanged = {
+                aCache.put(importRecordKey, it.joinToString(","))
+            },
+            openBrowser = { url ->
+                startActivity<WebViewActivity> {
+                    putExtra("url", url)
                 }
-            )
-            customView { alertBinding.root }
-            okButton {
+            }
+        )
+        AlertDialog.Builder(this)
+            .setView(alertBinding.root)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
                 val text = alertBinding.editView.text?.toString()?.trim()
                 text?.let {
                     if (it.isAbsUrl() && !cacheUrls.contains(it)) {
@@ -634,8 +633,8 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
                     showDialogFragment(ImportBookSourceDialog(it))
                 }
             }
-            cancelButton()
-        }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     override fun observeLiveBus() {
