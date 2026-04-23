@@ -458,14 +458,17 @@ result = `<img src = "${url}">`;
 
 ```js
 <js>
-var base = String(source.key).replace(/\/$/, "");
+//模板仅供参考剩下的自己摸索
+//可以调用阅读函数
+var base = ""
+//网页source.key
 var items = [
-  ["全部", "网址+{{page}}"],
-  ["最新", "网址+{{page}}"],
-  ["更新", "网址+{{page}}"],
-  ["都市", "网址+{{page}}"]
+  ["全部", "/{{page}}"],
+  ["最新", "/{{page}}"],
+  ["热门", "/{{page}}"],
+  ["推荐", "/{{page}}"]
 ];
-
+//自行拼接{{page}}固定会自动跳页
 var html = `
 <useweb>
 <!doctype html>
@@ -474,20 +477,18 @@ var html = `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; padding: 12px; background: transparent; font-family: sans-serif; }
+    body { margin: 0; padding: 12px; background: transparent; }
     .grid { display: flex; flex-wrap: wrap; gap: 8px; }
     button {
       flex: 1 0 calc(25% - 8px);
       min-width: 72px;
       padding: 10px 8px;
       border: 0;
-      border-radius: 10px;
-      background: #f5f5f5;
-      color: #333;
+      border-radius: 8px;
+      background: #3498db;
+      color: white;
       font-size: 13px;
-    }
-    @media (prefers-color-scheme: dark) {
-      button { background: #333; color: #eee; }
+      font-weight: 500;
     }
   </style>
 </head>
@@ -497,15 +498,22 @@ var html = `
     var baseUrl = "${base}";
     var items = ${JSON.stringify(items)};
     function openExplore(path, title) {
-      var url = /^https?:\\/\\//.test(path) ? path : baseUrl + path;
+      var url = path.replace("{{page}}", "1");
+      if (!/^https?:\\/\\//.test(url)) {
+        url = baseUrl + url;
+      }
       java.open("explore", url, title);
     }
-    document.getElementById("grid").innerHTML = items.map(function(item) {
-      return '<button onclick="openExplore('
-        + JSON.stringify(item[1]) + ','
-        + JSON.stringify(item[0]) + ')">'
-        + item[0] + '</button>';
-    }).join("");
+    
+    var grid = document.getElementById("grid");
+    items.forEach(function(item) {
+      var button = document.createElement("button");
+      button.textContent = item[0];
+      button.onclick = function() {
+        openExplore(item[1], item[0]);
+      };
+      grid.appendChild(button);
+    });
   </script>
 </body>
 </html>
