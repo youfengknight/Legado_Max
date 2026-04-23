@@ -108,6 +108,7 @@ class DictDialog() : BaseDialogFragment(R.layout.dialog_dict) {
                             val markwon: Markwon
                             val markdown = withContext(IO) {
                                 markwon = Markwon.builder(requireContext())
+                                    // 设置自定义链接解析器，使 Markdown 链接走内置浏览器
                                     .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {
                                         override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
                                             builder.linkResolver(InnerBrowserLinkResolver)

@@ -47,6 +47,7 @@ class UpdateDialog() : BaseDialogFragment(R.layout.dialog_update) {
             return
         }
         binding.textView.post {
+            // 配置链接点击使用内置浏览器打开
             Markwon.builder(requireContext())
                 .usePlugin(object : io.noties.markwon.AbstractMarkwonPlugin() {
                     override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {

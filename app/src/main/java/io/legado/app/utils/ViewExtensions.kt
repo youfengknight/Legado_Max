@@ -237,10 +237,12 @@ fun RadioGroup.checkByIndex(index: Int) {
 
 fun TextView.setHtml(html: String, imageGetter: GlideImageGetter? = null, textViewTagHandler: TextViewTagHandler? = null) {
     val spanned = html.parseAsHtml(HtmlCompat.FROM_HTML_MODE_COMPACT, imageGetter, textViewTagHandler)
+    // 替换 URLSpan 为 InnerBrowserUrlSpan，使链接走内置浏览器
     text = replaceUrlSpans(spanned)
 }
 
 fun TextView.setHtml(html: String, imageGetter: GlideImageGetter? = null, textViewTagHandler: TextViewTagHandler? = null, imgOnLongClickListener: (source: String) -> Unit, imgOnClickListener: (click: String) -> Unit) {
+    // 替换 URLSpan 为 InnerBrowserUrlSpan，使链接走内置浏览器
     val spanned = replaceUrlSpans(html.parseAsHtml(HtmlCompat.FROM_HTML_MODE_COMPACT, imageGetter, textViewTagHandler))
     val imageSpans = spanned.getSpans(0, spanned.length, ImageSpan::class.java)
     val clickSpans = mutableListOf<Triple<Pair<Int, Int>, String, String?>>()
@@ -339,6 +341,10 @@ fun TextView.setHtml(html: String, imageGetter: GlideImageGetter? = null, textVi
     }
 }
 
+/**
+ * 将 Spanned 中所有 URLSpan 替换为 InnerBrowserUrlSpan
+ * 使链接点击走内置浏览器而非外部浏览器
+ */
 private fun replaceUrlSpans(spanned: Spanned): Spanned {
     val urlSpans = spanned.getSpans(0, spanned.length, android.text.style.URLSpan::class.java)
     if (urlSpans.isEmpty()) return spanned
@@ -354,6 +360,7 @@ private fun replaceUrlSpans(spanned: Spanned): Spanned {
 }
 
 fun TextView.setMarkdown(markwon: Markwon, spanned: Spanned, imgOnLongClickListener: (source: String) -> Unit) {
+    // 替换 URLSpan 为 InnerBrowserUrlSpan，使链接走内置浏览器
     val processedSpanned = replaceUrlSpans(spanned)
     val imageSpans = processedSpanned.getSpans(0, processedSpanned.length, AsyncDrawableSpan::class.java)
     val clickSpans = mutableListOf<Pair<Pair<Int, Int>, String>>()

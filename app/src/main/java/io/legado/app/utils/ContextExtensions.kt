@@ -368,10 +368,18 @@ fun Context.openUrl(uri: Uri) {
     }
 }
 
+/**
+ * 使用内置浏览器打开链接
+ * http/https 协议打开 WebViewActivity，legado/yuedu 协议打开在线导入页，其他协议交给系统处理
+ */
 fun Context.openInInnerBrowser(url: String) {
     openInInnerBrowser(Uri.parse(url))
 }
 
+/**
+ * 使用内置浏览器打开链接
+ * http/https 协议打开 WebViewActivity，legado/yuedu 协议打开在线导入页，其他协议交给系统处理
+ */
 fun Context.openInInnerBrowser(uri: Uri) {
     when (uri.scheme) {
         "http", "https" -> {
