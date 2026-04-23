@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # 这里一次打 2 个包：app + app·S
-        product: [ app, app·S ]
+        # 这里一次打 3 个包：app + app·S + app·Max
+        product: [ app, app·S, app·Max ]
       fail-fast: false
 
     env:
@@ -48,7 +48,17 @@ jobs:
 
           # 2. 修改 APP 名称，自动加 ·S
           sed -i 's/app_name\">阅读/app_name\">阅读·S/' app/src/main/res/values/strings.xml
-          sed -i 's/app_name">阅读/app_name">阅读·S/' app/src/main/res/values-zh-rCN/strings.xml
+          sed -i 's/app_name">阅读/app_name">阅读·S/' app/src/main/res/values-zh/strings.xml
+
+      # ==============================================
+      # 重点：自动给 app·Max 改 软件名
+      # ==============================================
+      - name: 修改应用名 (仅对 app·Max 生效)
+        if: env.product == 'app·Max'
+        run: |
+          # 修改 APP 名称为 阅读·Max
+          sed -i 's/app_name\">阅读/app_name\">阅读·Max/' app/src/main/res/values/strings.xml
+          sed -i 's/app_name">阅读/app_name">阅读·Max/' app/src/main/res/values-zh/strings.xml
 
       - name: 统一版本号
         run: |
@@ -76,9 +86,9 @@ jobs:
       - name: 发布到 Release
         uses: softprops/action-gh-release@v2
         with:
-          name: 阅读双包版 ${{ env.VERSION }}
+          name: 阅读三包版 ${{ env.VERSION }}
           tag_name: ${{ env.VERSION }}
-          body: "自动打包：正常版 + ·S 版（双开共存）"
+          body: "自动打包：正常版 + ·S 版 + ·Max 版（三开共存）"
           files: apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
