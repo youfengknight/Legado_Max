@@ -30,6 +30,7 @@ import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.dialogs.AndroidAlertBuilder
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.CheckSource
@@ -596,6 +597,10 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         }
     }
 
+    /**
+     * 网络导入对话框
+     * 标题行包含信号标志（检测URL连接状态）和地球按钮（用内置浏览器打开URL）
+     */
     @SuppressLint("InflateParams")
     private fun showImportDialog() {
         val aCache = ACache.get(cacheDir = false)
@@ -603,7 +608,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
             .getAsString(importRecordKey)
             ?.splitNotBlank(",")
             ?.toMutableList() ?: mutableListOf()
-        alert(titleResource = R.string.import_on_line) {
+        alert({ AndroidAlertBuilder(it) }) {
             val alertBinding = ImportUrlDialogHelper.createBinding(
                 layoutInflater = layoutInflater,
                 context = this@BookSourceActivity,

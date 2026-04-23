@@ -20,8 +20,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 
+/**
+ * 网络导入URL对话框辅助类
+ * 提供信号标志（连接状态检测）和地球按钮（内置浏览器打开）功能
+ */
 object ImportUrlDialogHelper {
 
+    /**
+     * 创建网络导入对话框的Binding
+     * @param layoutInflater 布局填充器
+     * @param context 上下文
+     * @param lifecycleOwner 生命周期所有者，用于协程管理
+     * @param cacheUrls 历史URL缓存列表
+     * @param onUrlsChanged URL列表变更回调
+     * @param openBrowser 用浏览器打开URL的回调
+     */
     fun createBinding(
         layoutInflater: LayoutInflater,
         context: Context,
@@ -81,6 +94,12 @@ object ImportUrlDialogHelper {
         }
     }
 
+    /**
+     * 检测URL连接状态
+     * 使用HEAD请求检测，超时或异常返回false
+     * @param url 待检测的URL
+     * @return 是否连接成功
+     */
     private suspend fun checkUrlConnection(url: String): Boolean {
         return withContext(IO) {
             try {
