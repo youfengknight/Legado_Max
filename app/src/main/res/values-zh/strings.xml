@@ -1333,4 +1333,9 @@
     <string name="zero_match">0 处匹配</string>
     <string name="input_test_text_hint">请输入测试文本</string>
     <string name="regex_mode">正则</string>
+    <string name="smart_import">智能导入</string>
+    <string name="history_record">历史记录</string>
+    <string name="detected_as">识别为: %1$s (%2$d条)</string>
+    <string name="detecting">识别中...</string>
+    <string name="unknown_type">未知类型</string>
 </resources>

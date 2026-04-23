@@ -1457,4 +1457,9 @@
     <string name="checking_connection">检测中...</string>
     <string name="connection_success">连接成功</string>
     <string name="connection_failed">连接失败</string>
+    <string name="smart_import">Smart Import</string>
+    <string name="history_record">History</string>
+    <string name="detected_as">Detected as: %1$s (%2$d items)</string>
+    <string name="detecting">Detecting...</string>
+    <string name="unknown_type">Unknown type</string>
 </resources>

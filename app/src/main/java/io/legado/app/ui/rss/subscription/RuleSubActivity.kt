@@ -32,9 +32,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * 规则订阅界面
- */
 class RuleSubActivity : BaseActivity<ActivityRuleSubBinding>(),
     RuleSubAdapter.Callback {
 
