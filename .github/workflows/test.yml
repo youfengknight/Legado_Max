@@ -260,6 +260,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
+      VERSIONL: ${{ needs.prepare.outputs.versionL }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -294,29 +295,12 @@ jobs:
           files: ${{ github.workspace }}/apk/*.apk
           fail_on_unmatched_files: true
 
-      - name: Delete Pre-Release
-        if: needs.prepare.outputs.updateLog_updated != 'yes'
-        run: |
-          if gh release view beta &>/dev/null; then
-            gh release delete beta -y
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Create or update beta tag
-        if: needs.prepare.outputs.updateLog_updated != 'yes'
-        uses: richardsimko/update-tag@v1
-        with:
-          tag_name: beta
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish Pre-Release
         if: needs.prepare.outputs.updateLog_updated != 'yes'
         uses: softprops/action-gh-release@v2
         with:
-          name: legado_app_${{ env.VERSION }}
-          tag_name: beta
+          name: legado_app_${{ env.VERSIONL }}
+          tag_name: beta-${{ env.VERSIONL }}
           body: |
             ### 更新内容
             ${{ fromJSON(needs.prepare.outputs.updateLog_content) }}
