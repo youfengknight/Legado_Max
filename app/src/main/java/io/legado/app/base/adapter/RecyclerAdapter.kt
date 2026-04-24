@@ -37,6 +37,7 @@ abstract class RecyclerAdapter<ITEM, VB : ViewBinding>(protected val context: Co
     private var itemLongClickListener: ((holder: ItemViewHolder, item: ITEM) -> Boolean)? = null
 
     private var diffJob: Coroutine<*>? = null
+    private var diffGeneration = 0L
 
     private var isResumed = false
 
@@ -98,6 +99,7 @@ abstract class RecyclerAdapter<ITEM, VB : ViewBinding>(protected val context: Co
     @Synchronized
     fun setItems(items: List<ITEM>?) {
         kotlin.runCatching {
+            diffGeneration++
             if (this.items.isNotEmpty()) {
                 this.items.clear()
             }
@@ -165,6 +167,7 @@ abstract class RecyclerAdapter<ITEM, VB : ViewBinding>(protected val context: Co
                 return@runCatching
             }
             diffJob?.cancel()
+            val generation = ++diffGeneration
             diffJob = Coroutine.async {
                 val diffResult = if (skipDiff) withTimeoutOrNullAsync(500L) {
                     DiffUtil.calculateDiff(callback, itemsSize < 2000)
@@ -173,7 +176,10 @@ abstract class RecyclerAdapter<ITEM, VB : ViewBinding>(protected val context: Co
                 }
                 ensureActive()
                 handler.post {
-                    if (isResumed || diffResult == null) {
+                    if (generation != diffGeneration) {
+                        return@post
+                    }
+                    if (!isResumed || diffResult == null) {
                         setItems(items)
                         return@post
                     }
@@ -186,7 +192,6 @@ abstract class RecyclerAdapter<ITEM, VB : ViewBinding>(protected val context: Co
                     if (!isResumed) {
                         return@post
                     }
-                    ensureActive()
                     diffResult.dispatchUpdatesTo(this@RecyclerAdapter)
                     onCurrentListChanged()
                 }
@@ -451,6 +456,7 @@ abstract class RecyclerAdapter<ITEM, VB : ViewBinding>(protected val context: Co
             diffJob?.cancel()
             diffJob = null
             handler.removeCallbacksAndMessages(null)
+            diffGeneration++
         }
         this.isResumed = isResumed
     }

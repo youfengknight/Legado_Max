@@ -238,13 +238,11 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     override fun onResume() {
         super.onResume()
         adapter.upResumed(true)
-        adapter.onResume()
     }
 
     override fun onPause() {
         adapter.upResumed(false)
         searchView.clearFocus()
-        adapter.onPause()
         super.onPause()
     }
 

@@ -179,6 +179,8 @@ class Coroutine<T>(
                 val value = executeBlock(this, context, timeMillis ?: 0L, block)
                 ensureActive()
                 success?.let { dispatchCallback(this, value, it) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Throwable) {
                 e.printOnDebug()
                 val consume: Boolean = errorReturn?.value?.let { value ->
