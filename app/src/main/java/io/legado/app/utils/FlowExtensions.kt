@@ -217,13 +217,17 @@ fun <T> Flow<T>.flowWithLifecycleAndDatabaseChange(
     lifecycle: Lifecycle,
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
     table: String
-): Flow<T> = appDb.invalidationTracker
-    .createFlow(table)
-    .conflate()
-    .flatMapLatest {
-        this@flowWithLifecycleAndDatabaseChange
+): Flow<T> = callbackFlow {
+    lifecycle.repeatOnLifecycle(minActiveState) {
+        appDb.invalidationTracker.createFlow(table, emitInitialState = true)
+            .conflate()
+            .flatMapLatest {
+                this@flowWithLifecycleAndDatabaseChange
+            }
+            .collect { send(it) }
     }
-    .flowWithLifecycle(lifecycle, minActiveState)
+    close()
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun <T> Flow<T>.flowWithLifecycleAndDatabaseChangeFirst(
@@ -231,18 +235,13 @@ fun <T> Flow<T>.flowWithLifecycleAndDatabaseChangeFirst(
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
     table: String
 ): Flow<T> = callbackFlow {
-    val isActive = lifecycle.currentState.isAtLeast(minActiveState)
-    if (!isActive) {
-        this@flowWithLifecycleAndDatabaseChangeFirst.firstOrNull()?.let {
-            send(it)
-        }
+    lifecycle.repeatOnLifecycle(minActiveState) {
+        appDb.invalidationTracker.createFlow(table, emitInitialState = true)
+            .conflate()
+            .flatMapLatest {
+                this@flowWithLifecycleAndDatabaseChangeFirst
+            }
+            .collect { send(it) }
     }
-    appDb.invalidationTracker.createFlow(table, emitInitialState = isActive)
-        .conflate()
-        .flatMapLatest {
-            this@flowWithLifecycleAndDatabaseChangeFirst
-        }
-        .flowWithLifecycle(lifecycle, minActiveState)
-        .collect { send(it) }
     close()
 }
