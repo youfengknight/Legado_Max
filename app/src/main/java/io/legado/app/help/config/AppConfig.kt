@@ -298,6 +298,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val debugMode: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.debugMode, false)
 
+    // 崩溃时复制日志到剪贴板，默认开启
+    val copyCrashLog: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.copyCrashLog, true)
+
     val autoRefreshBook: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.autoRefresh)
 

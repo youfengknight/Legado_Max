@@ -20,6 +20,7 @@ import io.legado.app.utils.createFolderReplace
 import io.legado.app.utils.externalCache
 import io.legado.app.utils.getFile
 import io.legado.app.utils.longToastOnUiLegacy
+import io.legado.app.utils.sendToClip
 import io.legado.app.utils.stackTraceStr
 import io.legado.app.utils.writeText
 import splitties.init.appCtx
@@ -78,11 +79,24 @@ class CrashHandler(val context: Context) : Thread.UncaughtExceptionHandler {
         LocalConfig.appCrash = true
         //保存日志文件
         saveCrashInfo2File(ex)
+        //复制到剪贴板
+        if (AppConfig.copyCrashLog) {
+            copyCrashLogToClipboard(ex)
+        }
         if ((ex is OutOfMemoryError || ex.cause is OutOfMemoryError) && AppConfig.recordHeapDump) {
             doHeapDump()
         }
         context.longToastOnUiLegacy(ex.stackTraceStr)
         Thread.sleep(3000)
+    }
+
+    /**
+     * 复制崩溃日志到剪贴板
+     */
+    private fun copyCrashLogToClipboard(ex: Throwable) {
+        kotlin.runCatching {
+            context.sendToClip(generateCrashLog(ex))
+        }
     }
 
     companion object {
@@ -121,9 +135,9 @@ class CrashHandler(val context: Context) : Thread.UncaughtExceptionHandler {
         private val format = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
 
         /**
-         * 保存错误信息到文件中
+         * 生成崩溃日志字符串
          */
-        fun saveCrashInfo2File(ex: Throwable) {
+        private fun generateCrashLog(ex: Throwable): String {
             val sb = StringBuilder()
             for ((key, value) in paramsMap) {
                 sb.append(key).append("=").append(value).append("\n")
@@ -138,9 +152,15 @@ class CrashHandler(val context: Context) : Thread.UncaughtExceptionHandler {
                 cause = cause.cause
             }
             printWriter.close()
-            val result = writer.toString()
-            sb.append(result)
-            val crashLog = sb.toString()
+            sb.append(writer.toString())
+            return sb.toString()
+        }
+
+        /**
+         * 保存错误信息到文件中
+         */
+        fun saveCrashInfo2File(ex: Throwable) {
+            val crashLog = generateCrashLog(ex)
             val timestamp = System.currentTimeMillis()
             val time = format.format(Date())
             val fileName = "crash-$time-$timestamp.log"

@@ -658,6 +658,8 @@
     <string name="show_rss">Show RSS feeds</string>
     <string name="debug_mode">调试模式</string>
     <string name="debug_mode_summary">开启后显示调试工具入口</string>
+    <string name="copy_crash_log_title">崩溃时复制日志</string>
+    <string name="copy_crash_log_summary">应用崩溃时自动将日志复制到剪贴板</string>
     <string name="service_stop">Service stopped</string>
     <string name="service_start">Starting service\nChecking notification bar for details</string>
     <string name="default_path">Default path</string>
