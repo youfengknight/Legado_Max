@@ -1,10 +1,12 @@
 package io.legado.app.ui.about
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.R
@@ -37,6 +39,8 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
         LogAdapter(requireContext())
     }
 
+    private var searchQuery: String = ""
+
     override fun onStart() {
         super.onStart()
         setLayout(0.9f, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -52,14 +56,56 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
             recyclerView.adapter = adapter
         }
         adapter.setItems(AppLog.logs)
+        setupSearchView()
+    }
+
+    /**
+     * 设置搜索视图
+     * 监听搜索文本变化，实时过滤日志列表并高亮匹配文字
+     */
+    private fun setupSearchView() {
+        val searchItem = binding.toolBar.menu.findItem(R.id.menu_search)
+        val searchView = searchItem?.actionView as? SearchView
+        searchView?.apply {
+            queryHint = getString(R.string.search)
+            setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    searchQuery = newText ?: ""
+                    filterLogs()
+                    return true
+                }
+            })
+        }
+    }
+
+    /**
+     * 根据搜索关键词过滤日志
+     * 同时触发列表刷新以更新高亮显示
+     */
+    private fun filterLogs() {
+        val allLogs = AppLog.logs
+        if (searchQuery.isEmpty()) {
+            adapter.setItems(allLogs)
+        } else {
+            val filtered = allLogs.filter { logEntry ->
+                logEntry.second.contains(searchQuery, ignoreCase = true)
+            }
+            adapter.setItems(filtered)
+        }
     }
 
     /**
      * 处理菜单项点击事件
-     * 目前仅支持清除日志操作
      */
     override fun onMenuItemClick(item: MenuItem?): Boolean {
         when (item?.itemId) {
+            R.id.menu_search -> {
+                // SearchView 会自动处理展开/收起
+            }
             R.id.menu_clear -> {
                 AppLog.clear()
                 adapter.clearItems()
@@ -85,6 +131,7 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
         /**
          * 绑定日志数据到视图
          * 显示日志时间和消息内容
+         * 当存在搜索关键词时，高亮匹配的文字
          */
         override fun convert(
             holder: ItemViewHolder,
@@ -93,7 +140,12 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
             payloads: MutableList<Any>
         ) {
             binding.textTime.text = LogUtils.logTimeFormat.format(Date(item.first))
-            binding.textMessage.text = item.second
+            val message = item.second
+            if (searchQuery.isNotEmpty() && message.contains(searchQuery, ignoreCase = true)) {
+                binding.textMessage.text = highlightText(message, searchQuery)
+            } else {
+                binding.textMessage.text = message
+            }
         }
 
         /**
@@ -109,5 +161,26 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
                 }
             }
         }
+    }
+
+    /**
+     * 高亮显示匹配的文字
+     * 使用 BackgroundColorSpan 将匹配部分标记为黄色背景
+     */
+    private fun highlightText(text: String, query: String): android.text.Spannable {
+        val spannable = android.text.SpannableStringBuilder(text)
+        var startIndex = 0
+        while (true) {
+            val index = text.indexOf(query, startIndex, ignoreCase = true)
+            if (index < 0) break
+            spannable.setSpan(
+                android.text.style.BackgroundColorSpan(Color.YELLOW),
+                index,
+                index + query.length,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            startIndex = index + query.length
+        }
+        return spannable
     }
 }

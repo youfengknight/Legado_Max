@@ -1,11 +1,13 @@
 package io.legado.app.ui.about
 
 import android.app.Application
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.MutableLiveData
@@ -50,6 +52,10 @@ class CrashLogsDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
 
     private val adapter by lazy { LogAdapter() }
 
+    private var searchQuery: String = ""
+
+    private var allLogs: List<FileDoc> = emptyList()
+
     override fun onStart() {
         super.onStart()
         setLayout(0.9f, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -63,17 +69,59 @@ class CrashLogsDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
         viewModel.logLiveData.observe(viewLifecycleOwner) {
-            adapter.setItems(it)
+            allLogs = it
+            filterLogs()
         }
         viewModel.initData()
+        setupSearchView()
+    }
+
+    /**
+     * 设置搜索视图
+     * 监听搜索文本变化，实时过滤日志列表并高亮匹配文字
+     */
+    private fun setupSearchView() {
+        val searchItem = binding.toolBar.menu.findItem(R.id.menu_search)
+        val searchView = searchItem?.actionView as? SearchView
+        searchView?.apply {
+            queryHint = getString(R.string.search)
+            setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    searchQuery = newText ?: ""
+                    filterLogs()
+                    return true
+                }
+            })
+        }
+    }
+
+    /**
+     * 根据搜索关键词过滤日志
+     * 同时触发列表刷新以更新高亮显示
+     */
+    private fun filterLogs() {
+        if (searchQuery.isEmpty()) {
+            adapter.setItems(allLogs)
+        } else {
+            val filtered = allLogs.filter { logEntry ->
+                logEntry.name.contains(searchQuery, ignoreCase = true)
+            }
+            adapter.setItems(filtered)
+        }
     }
 
     /**
      * 处理菜单项点击事件
-     * 目前仅支持清除崩溃日志操作
      */
     override fun onMenuItemClick(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.menu_search -> {
+                // SearchView 会自动处理展开/收起
+            }
             R.id.menu_clear -> viewModel.clearCrashLog()
         }
         return true
@@ -112,6 +160,7 @@ class CrashLogsDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
 
         /**
          * 绑定文件名到视图
+         * 当存在搜索关键词时，高亮匹配的文字
          */
         override fun convert(
             holder: ItemViewHolder,
@@ -119,8 +168,34 @@ class CrashLogsDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
             item: FileDoc,
             payloads: MutableList<Any>
         ) {
-            binding.textView.text = item.name
+            val fileName = item.name
+            if (searchQuery.isNotEmpty() && fileName.contains(searchQuery, ignoreCase = true)) {
+                binding.textView.text = highlightText(fileName, searchQuery)
+            } else {
+                binding.textView.text = fileName
+            }
         }
+    }
+
+    /**
+     * 高亮显示匹配的文字
+     * 使用 BackgroundColorSpan 将匹配部分标记为黄色背景
+     */
+    private fun highlightText(text: String, query: String): android.text.Spannable {
+        val spannable = android.text.SpannableStringBuilder(text)
+        var startIndex = 0
+        while (true) {
+            val index = text.indexOf(query, startIndex, ignoreCase = true)
+            if (index < 0) break
+            spannable.setSpan(
+                android.text.style.BackgroundColorSpan(Color.YELLOW),
+                index,
+                index + query.length,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            startIndex = index + query.length
+        }
+        return spannable
     }
 
     /**
