@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TextDialog 帮助文档切换器 - 完整版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'Noto Sans SC', 'PingFang SC', sans-serif;
+    background: rgba(0,0,0,0.5);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  /* 对话框主体 */
+  .dialog {
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 标题栏 - 左上角区域 */
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    gap: 12px;
+  }
+
+  /* 标题文字 */
+  .dialog-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+  }
+
+  /* 下拉菜单容器 */
+  .dropdown-container {
+    position: relative;
+  }
+
+  /* 下拉按钮 */
+  .dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #fff;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    transition: all 0.2s;
+  }
+
+  .dropdown-btn:hover {
+    background: #e8f4ff;
+    border-color: #4a90d9;
+  }
+
+  .dropdown-btn .arrow {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #888;
+    transition: transform 0.2s;
+  }
+
+  .dropdown-btn.active .arrow {
+    transform: rotate(180deg);
+  }
+
+  /* 下拉菜单列表 */
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 200px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.25s ease;
+  }
+
+  .dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  /* 菜单项 */
+  .menu-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #444;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .menu-item:first-child { border-radius: 8px 8px 0 0; }
+  .menu-item:last-child { border-radius: 0 0 8px 8px; border-bottom: none; }
+
+  .menu-item:hover {
+    background: #e8f4ff;
+    color: #1a73e8;
+  }
+
+  .menu-item.active {
+    background: #e3f2fd;
+    color: #1976d2;
+    font-weight: 500;
+  }
+
+  .menu-item .icon {
+    font-size: 12px;
+    opacity: 0.6;
+    width: 16px;
+    text-align: center;
+  }
+
+  .menu-item.active .icon {
+    opacity: 1;
+  }
+
+  /* 内容区域 */
+  .dialog-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #fafafa;
+  }
+
+  .content-area {
+    line-height: 1.8;
+    color: #333;
+  }
+
+  .content-area h1 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: #222;
+    border-bottom: 2px solid #4a90d9;
+    padding-bottom: 8px;
+  }
+
+  .content-area h2 {
+    font-size: 20px;
+    margin: 20px 0 12px;
+    color: #444;
+  }
+
+  .content-area p {
+    margin-bottom: 12px;
+  }
+
+  .content-area code {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    color: #c7254e;
+  }
+
+  .content-area pre {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+
+  .content-area pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
+
+  /* 底部操作栏 */
+  .dialog-footer {
+    padding: 12px 20px;
+    background: #f5f5f5;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  .btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary {
+    background: #e0e0e0;
+    color: #555;
+  }
+
+  .btn-secondary:hover { background: #d0d0d0; }
+
+  .btn-primary {
+    background: #4a90d9;
+    color: #fff;
+  }
+
+  .btn-primary:hover { background: #357abd; }
+
+  /* 动画效果 */
+  .content-area {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 滚动条美化 */
+  .dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .dropdown-menu::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+  }
+
+  .dropdown-menu::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+  }
+
+  .dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<div class="dialog">
+  <!-- 标题栏：包含标题和下拉菜单 -->
+  <div class="dialog-header">
+    <div class="dialog-title">帮助</div>
+    
+    <!-- 下拉菜单 -->
+    <div class="dropdown-container">
+      <button class="dropdown-btn" onclick="toggleDropdown()">
+        <span id="currentDoc">APP帮助文档</span>
+        <div class="arrow"></div>
+      </button>
+      
+      <div class="dropdown-menu" id="dropdownMenu">
+        <div class="menu-item active" onclick="selectDoc('appHelp.md', 'APP帮助文档')">
+          <span class="icon">📱</span> APP帮助文档
+        </div>
+        <div class="menu-item" onclick="selectDoc('ruleHelp.md', '书源制作教程')">
+          <span class="icon">📚</span> 书源制作教程
+        </div>
+        <div class="menu-item" onclick="selectDoc('rssRuleHelp.md', '订阅源教程')">
+          <span class="icon">📰</span> 订阅源教程
+        </div>
+        <div class="menu-item" onclick="selectDoc('jsHelp.md', 'js变量和函数')">
+          <span class="icon">📝</span> js变量和函数
+        </div>
+        <div class="menu-item" onclick="selectDoc('xpathHelp.md', 'xpath语法教程')">
+          <span class="icon">🔍</span> xpath语法教程
+        </div>
+        <div class="menu-item" onclick="selectDoc('regexHelp.md', '正则表达式教程')">
+          <span class="icon">🔧</span> 正则表达式教程
+        </div>
+        <div class="menu-item" onclick="selectDoc('txtTocRuleHelp.md', 'txt目录正则说明')">
+          <span class="icon">📄</span> txt目录正则说明
+        </div>
+        <div class="menu-item" onclick="selectDoc('debugHelp.md', '书源调试说明')">
+          <span class="icon">🐛</span> 书源调试说明
+        </div>
+        <div class="menu-item" onclick="selectDoc('httpTTSHelp.md', '在线朗读规则')">
+          <span class="icon">🔊</span> 在线朗读规则
+        </div>
+        <div class="menu-item" onclick="selectDoc('webDavBookHelp.md', 'WebDav书籍使用教程')">
+          <span class="icon">☁️</span> WebDav书籍使用教程
+        </div>
+        <div class="menu-item" onclick="selectDoc('webDavHelp.md', 'WebDav备份教程')">
+          <span class="icon">💾</span> WebDav备份教程
+        </div>
+        <div class="menu-item" onclick="selectDoc('readMenuHelp.md', '阅读菜单说明')">
+          <span class="icon">📖</span> 阅读菜单说明
+        </div>
+        <div class="menu-item" onclick="selectDoc('dictRuleHelp.md', '字典规则说明')">
+          <span class="icon">📕</span> 字典规则说明
+        </div>
+        <div class="menu-item" onclick="selectDoc('replaceRuleHelp.md', '替换规则说明')">
+          <span class="icon">🔄</span> 替换规则说明
+        </div>
+        <div class="menu-item" onclick="selectDoc('SourceMBookHelp.md', '书源说明')">
+          <span class="icon">📑</span> 书源说明
+        </div>
+        <div class="menu-item" onclick="selectDoc('SourceMRssHelp.md', 'RSS源说明')">
+          <span class="icon">📡</span> RSS源说明
+        </div>
+        <div class="menu-item" onclick="selectDoc('ExtensionContentType.md', '扩展内容类型')">
+          <span class="icon">🧩</span> 扩展内容类型
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 内容区域 -->
+  <div class="dialog-content">
+    <div class="content-area" id="contentArea">
+      <h1># APP帮助文档</h1>
+      <p>这是 <strong>APP帮助文档</strong> 的内容...</p>
+      <p>欢迎使用阅读APP！本文档将帮助您了解如何使用各项功能。</p>
+      
+      <h2>## 快速开始</h2>
+      <p>首次使用时，您可以：</p>
+      <pre><code>1. 添加书源
+2. 搜索书籍
+3. 加入书架
+4. 开始阅读</code></pre>
+      
+      <h2>## 主要功能</h2>
+      <p>• 书籍搜索：支持多源并发搜索</p>
+      <p>• 书架管理：自定义分组、批量操作</p>
+      <p>• 阅读设置：字体、背景、翻页方式</p>
+      <p>• 听书功能：TTS朗读、音频播放</p>
+      <p>• 备份同步：WebDav云备份</p>
+    </div>
+  </div>
+
+  <!-- 底部按钮 -->
+  <div class="dialog-footer">
+    <button class="btn btn-secondary">取消</button>
+    <button class="btn btn-primary">确定</button>
+  </div>
+</div>
+
+<script>
+  // 下拉菜单切换
+  function toggleDropdown() {
+    const menu = document.getElementById('dropdownMenu');
+    const btn = document.querySelector('.dropdown-btn');
+    menu.classList.toggle('show');
+    btn.classList.toggle('active');
+  }
+
+  // 选择文档
+  function selectDoc(fileName, displayName) {
+    // 更新当前选中
+    document.getElementById('currentDoc').textContent = displayName;
+    
+    // 更新菜单项高亮
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.classList.remove('active');
+      if (item.textContent.trim() === displayName) {
+        item.classList.add('active');
+      }
+    });
+    
+    // 关闭下拉菜单
+    toggleDropdown();
+    
+    // 模拟内容切换（带淡入动画）
+    const contentArea = document.getElementById('contentArea');
+    contentArea.style.animation = 'none';
+    setTimeout(() => {
+      contentArea.innerHTML = `
+        <h1># ${displayName}</h1>
+        <p>这是 <strong>${displayName}</strong> (${fileName}) 的内容...</p>
+        <p>这里显示的是从 <code>assets/web/help/md/${fileName}</code> 读取的 Markdown 文件，经过渲染后的效果。</p>
+        <pre><code>// 示例代码
+function example() {
+  console.log("Hello ${displayName}");
+}</code></pre>
+        <h2>## 使用说明</h2>
+        <p>在实际的 Android 应用中，选择不同文档时会：</p>
+        <p>1. 从 assets 目录读取对应的 .md 文件</p>
+        <p>2. 使用 TextDialog 的 Mode.MD 模式渲染 Markdown</p>
+        <p>3. 在对话框中展示给用户</p>
+      `;
+      contentArea.style.animation = 'fadeIn 0.3s ease';
+    }, 50);
+  }
+
+  // 点击外部关闭菜单
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown-container')) {
+      document.getElementById('dropdownMenu').classList.remove('show');
+      document.querySelector('.dropdown-btn').classList.remove('active');
+    }
+  });
+</script>
+
+</body>
+</html>
