@@ -6,6 +6,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -19,9 +20,14 @@ import io.legado.app.databinding.ItemRssReadRecordBinding
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.rss.read.ReadRss
+import io.legado.app.utils.SearchHighlightUtils
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
+/**
+ * RSS 阅读记录对话框
+ * 用于显示和管理 RSS 文章的阅读历史记录
+ */
 class ReadRecordDialog(private val origin: String? = null) : BaseDialogFragment(R.layout.dialog_recycler_view),
     Toolbar.OnMenuItemClickListener {
 
@@ -30,6 +36,9 @@ class ReadRecordDialog(private val origin: String? = null) : BaseDialogFragment(
     private val adapter by lazy {
         ReadRecordAdapter(requireContext())
     }
+
+    private var searchQuery: String = ""
+    private var allRecords: List<RssReadRecord> = emptyList()
 
     override fun onStart() {
         super.onStart()
@@ -45,16 +54,56 @@ class ReadRecordDialog(private val origin: String? = null) : BaseDialogFragment(
             recyclerView.layoutManager = LinearLayoutManager(requireContext())
             recyclerView.adapter = adapter
         }
-        adapter.setItems(viewModel.getRecords(origin))
+        allRecords = viewModel.getRecords(origin)
+        adapter.setItems(allRecords)
         adapter.setOnRecordClickListener(object : OnRecordClickListener {
             override fun onRecordClick(record: RssReadRecord?) {
                 record?.let { ReadRss.readRss(activity as AppCompatActivity, it)}
             }
         })
+        setupSearchView()
+    }
+
+    /**
+     * 设置搜索视图
+     * 监听搜索文本变化，实时过滤记录列表并高亮匹配文字
+     */
+    private fun setupSearchView() {
+        val searchItem = binding.toolBar.menu.findItem(R.id.menu_search)
+        val searchView = searchItem?.actionView as? SearchView
+        searchView?.apply {
+            queryHint = getString(R.string.search)
+            setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    searchQuery = newText ?: ""
+                    filterRecords()
+                    return true
+                }
+            })
+        }
+    }
+
+    /**
+     * 根据搜索关键词过滤记录
+     * 同时触发列表刷新以更新高亮显示
+     */
+    private fun filterRecords() {
+        val filtered = SearchHighlightUtils.filterList(allRecords, searchQuery) { record, query ->
+            record.title.contains(query, ignoreCase = true) ||
+            record.record.contains(query, ignoreCase = true)
+        }
+        adapter.setItems(filtered)
     }
 
     override fun onMenuItemClick(item: MenuItem?): Boolean {
         when (item?.itemId) {
+            R.id.menu_search -> {
+                // SearchView 会自动处理展开/收起
+            }
             R.id.menu_clear -> {
                 alert(R.string.draw) {
                     val countRead = viewModel.countRecords(origin)
@@ -82,14 +131,19 @@ class ReadRecordDialog(private val origin: String? = null) : BaseDialogFragment(
             return ItemRssReadRecordBinding.inflate(inflater, parent, false)
         }
 
+        /**
+         * 绑定记录数据到视图
+         * 显示标题和阅读进度
+         * 当存在搜索关键词时，高亮匹配的文字
+         */
         override fun convert(
             holder: ItemViewHolder,
             binding: ItemRssReadRecordBinding,
             item: RssReadRecord,
             payloads: MutableList<Any>
         ) {
-            binding.textTitle.text = item.title
-            binding.textRecord.text = item.record
+            binding.textTitle.text = SearchHighlightUtils.getHighlightedText(item.title, searchQuery)
+            binding.textRecord.text = SearchHighlightUtils.getHighlightedText(item.record, searchQuery)
         }
 
         override fun registerListener(holder: ItemViewHolder, binding: ItemRssReadRecordBinding) {
@@ -98,7 +152,6 @@ class ReadRecordDialog(private val origin: String? = null) : BaseDialogFragment(
                 dismiss()
             }
         }
-
     }
 
     interface OnRecordClickListener {

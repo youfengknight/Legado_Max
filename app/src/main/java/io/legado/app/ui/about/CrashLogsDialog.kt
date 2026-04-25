@@ -1,7 +1,6 @@
 package io.legado.app.ui.about
 
 import android.app.Application
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
@@ -25,6 +24,7 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
+import io.legado.app.utils.SearchHighlightUtils
 import io.legado.app.utils.delete
 import io.legado.app.utils.find
 import io.legado.app.utils.getFile
@@ -104,14 +104,10 @@ class CrashLogsDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
      * 同时触发列表刷新以更新高亮显示
      */
     private fun filterLogs() {
-        if (searchQuery.isEmpty()) {
-            adapter.setItems(allLogs)
-        } else {
-            val filtered = allLogs.filter { logEntry ->
-                logEntry.name.contains(searchQuery, ignoreCase = true)
-            }
-            adapter.setItems(filtered)
+        val filtered = SearchHighlightUtils.filterList(allLogs, searchQuery) { logEntry, query ->
+            logEntry.name.contains(query, ignoreCase = true)
         }
+        adapter.setItems(filtered)
     }
 
     /**
@@ -168,34 +164,8 @@ class CrashLogsDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
             item: FileDoc,
             payloads: MutableList<Any>
         ) {
-            val fileName = item.name
-            if (searchQuery.isNotEmpty() && fileName.contains(searchQuery, ignoreCase = true)) {
-                binding.textView.text = highlightText(fileName, searchQuery)
-            } else {
-                binding.textView.text = fileName
-            }
+            binding.textView.text = SearchHighlightUtils.getHighlightedText(item.name, searchQuery)
         }
-    }
-
-    /**
-     * 高亮显示匹配的文字
-     * 使用 BackgroundColorSpan 将匹配部分标记为黄色背景
-     */
-    private fun highlightText(text: String, query: String): android.text.Spannable {
-        val spannable = android.text.SpannableStringBuilder(text)
-        var startIndex = 0
-        while (true) {
-            val index = text.indexOf(query, startIndex, ignoreCase = true)
-            if (index < 0) break
-            spannable.setSpan(
-                android.text.style.BackgroundColorSpan(Color.YELLOW),
-                index,
-                index + query.length,
-                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            startIndex = index + query.length
-        }
-        return spannable
     }
 
     /**

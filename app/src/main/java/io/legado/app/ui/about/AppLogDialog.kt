@@ -1,7 +1,6 @@
 package io.legado.app.ui.about
 
 import android.content.Context
-import android.graphics.Color
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
@@ -19,6 +18,7 @@ import io.legado.app.databinding.ItemAppLogBinding
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.LogUtils
+import io.legado.app.utils.SearchHighlightUtils
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -87,15 +87,10 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
      * 同时触发列表刷新以更新高亮显示
      */
     private fun filterLogs() {
-        val allLogs = AppLog.logs
-        if (searchQuery.isEmpty()) {
-            adapter.setItems(allLogs)
-        } else {
-            val filtered = allLogs.filter { logEntry ->
-                logEntry.second.contains(searchQuery, ignoreCase = true)
-            }
-            adapter.setItems(filtered)
+        val filtered = SearchHighlightUtils.filterList(AppLog.logs, searchQuery) { logEntry, query ->
+            logEntry.second.contains(query, ignoreCase = true)
         }
+        adapter.setItems(filtered)
     }
 
     /**
@@ -140,12 +135,7 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
             payloads: MutableList<Any>
         ) {
             binding.textTime.text = LogUtils.logTimeFormat.format(Date(item.first))
-            val message = item.second
-            if (searchQuery.isNotEmpty() && message.contains(searchQuery, ignoreCase = true)) {
-                binding.textMessage.text = highlightText(message, searchQuery)
-            } else {
-                binding.textMessage.text = message
-            }
+            binding.textMessage.text = SearchHighlightUtils.getHighlightedText(item.second, searchQuery)
         }
 
         /**
@@ -161,26 +151,5 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
                 }
             }
         }
-    }
-
-    /**
-     * 高亮显示匹配的文字
-     * 使用 BackgroundColorSpan 将匹配部分标记为黄色背景
-     */
-    private fun highlightText(text: String, query: String): android.text.Spannable {
-        val spannable = android.text.SpannableStringBuilder(text)
-        var startIndex = 0
-        while (true) {
-            val index = text.indexOf(query, startIndex, ignoreCase = true)
-            if (index < 0) break
-            spannable.setSpan(
-                android.text.style.BackgroundColorSpan(Color.YELLOW),
-                index,
-                index + query.length,
-                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            startIndex = index + query.length
-        }
-        return spannable
     }
 }
