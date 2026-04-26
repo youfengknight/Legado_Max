@@ -153,15 +153,38 @@ object ThemeConfig {
         save()
     }
 
-    fun addConfig(json: String): Boolean {
-        GSON.fromJsonObject<Config>(json.trim { it < ' ' }).getOrNull()
-            ?.let {
-                if (validateConfig(it)) {
-                    addConfig(it)
-                    return true
+    fun addConfig(json: String): Int {
+        val trimmedJson = json.trim { it < ' ' }
+        var count = 0
+        GSON.fromJsonArray<Config>(trimmedJson).getOrNull()?.let { configs ->
+            configs.forEach { config ->
+                if (validateConfig(config)) {
+                    addConfig(config)
+                    count++
                 }
             }
-        return false
+            return count
+        }
+        trimmedJson.lines().forEach { line ->
+            val lineTrimmed = line.trim()
+            if (lineTrimmed.isNotEmpty() && lineTrimmed.startsWith("{")) {
+                GSON.fromJsonObject<Config>(lineTrimmed).getOrNull()?.let { config ->
+                    if (validateConfig(config)) {
+                        addConfig(config)
+                        count++
+                    }
+                }
+            }
+        }
+        if (count == 0) {
+            GSON.fromJsonObject<Config>(trimmedJson).getOrNull()?.let {
+                if (validateConfig(it)) {
+                    addConfig(it)
+                    count = 1
+                }
+            }
+        }
+        return count
     }
 
     fun addConfig(newConfig: Config) {

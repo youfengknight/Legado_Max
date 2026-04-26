@@ -139,11 +139,7 @@ jobs:
           echo "body=$CONTENT_JSON" >> $GITHUB_OUTPUT
       - id: set-matrix
         run: |
-          if [ "${{ steps.updateLog.outputs.updated }}" == "yes" ]; then
-            echo 'build_matrix={"product":["app"],"type":["release","releaseS"]}' >> $GITHUB_OUTPUT
-          else
-            echo 'build_matrix={"product":["app"],"type":["release"]}' >> $GITHUB_OUTPUT
-          fi
+          echo 'build_matrix={"product":["app"],"type":["release","releaseS","releaseLegacy"]}' >> $GITHUB_OUTPUT
 
   build:
     needs: prepare
@@ -188,23 +184,28 @@ jobs:
         run: |
           if [ "${{ env.type }}" == 'release' ]; then
             typeName="原包名"
-          else
+            gradleTask="assembleAppMaxRelease"
+          elif [ "${{ env.type }}" == 'releaseS' ]; then
             typeName="共存"
-            sed "s/'.release'/'.releaseS'/" $GITHUB_WORKSPACE/app/build.gradle  -i
-            # sed 's/.release/.releaseS/'     $GITHUB_WORKSPACE/app/google-services.json -i
+            gradleTask="assembleAppSRelease"
+          else
+            typeName="旧版覆盖"
+            gradleTask="assembleAppLegacyRelease"
           fi
           echo "统一版本号"
           sed "/def version/c def version = \"${{ env.VERSION }}\"" $GITHUB_WORKSPACE/app/build.gradle  -i
           echo "开始${{ env.product }}$typeName构建"
           chmod +x gradlew
-          ./gradlew assemble${{ env.product }}release --build-cache --parallel --daemon --warning-mode all
+          ./gradlew $gradleTask --build-cache --parallel --daemon --warning-mode all
           echo "修改APK文件名"
           mkdir -p ${{ github.workspace }}/apk/
           for file in `ls ${{ github.workspace }}/app/build/outputs/apk/*/*/*.apk`; do
             if [ "${{ env.type }}" == 'release' ]; then
               mv "$file" ${{ github.workspace }}/apk/legado_测试版_${{ env.VERSIONL }}_$typeName.apk
-            else
+            elif [ "${{ env.type }}" == 'releaseS' ]; then
               mv "$file" ${{ github.workspace }}/apk/legado_正式版_${{ env.VERSIONL }}_$typeName.apk
+            else
+              mv "$file" ${{ github.workspace }}/apk/legado_兼容版_${{ env.VERSIONL }}_$typeName.apk
             fi
           done
           echo "移动mapping文件"
@@ -277,6 +278,8 @@ jobs:
           for file in `ls *.apk`; do
             if [[ "$file" == *原包名* ]]; then
               mv "$file" $(echo $file | sed -e s/原包名/release/ -e s/测试版/beta/)
+            elif [[ "$file" == *旧版覆盖* ]]; then
+              mv "$file" $(echo $file | sed -e s/旧版覆盖/legacy/ -e s/兼容版/compat/)
             else
               mv "$file" $(echo $file | sed -e s/共存/releaseS/ -e s/正式版/plus/)
             fi
@@ -348,17 +351,25 @@ jobs:
           mv */*.apk .
           rm -rf */
           has_plus=false
+          has_legacy=false
           for file in `ls *.apk`; do
             if [[ "$file" == *原包名* ]]; then
               mv "$file" $(echo $file | sed s/原包名/beta/)
+            elif [[ "$file" == *旧版覆盖* ]]; then
+              mv "$file" $(echo $file | sed s/旧版覆盖/legacy/)
+              has_legacy=true
             else
               mv "$file" $(echo $file | sed s/共存/plus/)
               has_plus=true
             fi
           done
           tags=""
-          if [ "$has_plus" = true ]; then
+          if [ "$has_plus" = true ] && [ "$has_legacy" = true ]; then
+            tags="#beta #plus #legacy"
+          elif [ "$has_plus" = true ]; then
             tags="#beta #plus"
+          elif [ "$has_legacy" = true ]; then
+            tags="#beta #legacy"
           else
             tags="#beta"
           fi
@@ -393,6 +404,8 @@ jobs:
           for file in `ls *.apk`; do
             if [[ "$file" == *原包名* ]]; then
               mv "$file" $(echo $file | sed s/原包名/release/)
+            elif [[ "$file" == *旧版覆盖* ]]; then
+              mv "$file" $(echo $file | sed s/旧版覆盖/legacy/)
             else
               mv "$file" $(echo $file | sed s/共存/releaseS/)
             fi

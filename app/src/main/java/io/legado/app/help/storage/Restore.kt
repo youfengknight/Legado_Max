@@ -41,7 +41,10 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.compress.ZipUtils
 import io.legado.app.utils.defaultSharedPreferences
+import io.legado.app.utils.externalFiles
 import io.legado.app.utils.fromJsonArray
+import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.getFile
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefString
@@ -305,6 +308,7 @@ object Restore {
 
         // 恢复阅读界面配置（可配置忽略）
         if (!BackupConfig.ignoreReadConfig) {
+            restoreReadConfigBackgrounds(path)
             //恢复阅读界面配置
             File(path, ReadBookConfig.configFileName).takeIf {
                 it.exists()
@@ -426,6 +430,46 @@ object Restore {
             appCtx.toastOnUi("$fileName\n读取文件出错\n${e.localizedMessage}")
         }
         return null
+    }
+
+    private fun restoreReadConfigBackgrounds(path: String) {
+        val bgNames = linkedSetOf<String>()
+        File(path, ReadBookConfig.configFileName).takeIf { it.exists() }?.runCatching {
+            GSON.fromJsonArray<ReadBookConfig.Config>(readText()).getOrThrow()
+        }?.getOrNull()?.forEach { config ->
+            collectBgNames(config, bgNames)
+        }
+        File(path, ReadBookConfig.shareConfigFileName).takeIf { it.exists() }?.runCatching {
+            GSON.fromJsonObject<ReadBookConfig.Config>(readText()).getOrThrow()
+        }?.getOrNull()?.let { config ->
+            collectBgNames(config, bgNames)
+        }
+        if (bgNames.isEmpty()) return
+        val bgDir = appCtx.externalFiles.getFile("bg")
+        if (!bgDir.exists()) {
+            bgDir.mkdirs()
+        }
+        bgNames.forEach { bgName ->
+            File(path, bgName).takeIf { it.exists() && it.isFile }?.copyTo(
+                File(bgDir, bgName),
+                overwrite = true
+            )
+        }
+    }
+
+    private fun collectBgNames(
+        config: ReadBookConfig.Config,
+        bgNames: MutableSet<String>
+    ) {
+        if (config.bgType == 2) {
+            bgNames.add(File(config.bgStr).name)
+        }
+        if (config.bgTypeNight == 2) {
+            bgNames.add(File(config.bgStrNight).name)
+        }
+        if (config.bgTypeEInk == 2) {
+            bgNames.add(File(config.bgStrEInk).name)
+        }
     }
 
 }

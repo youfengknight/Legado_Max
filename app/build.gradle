@@ -27,6 +27,11 @@ static def releaseCode() {
 def name = "legado"
 def version = "3." + releaseTime()
 def gitCommits = 0
+def bundledReleaseStoreFile = rootProject.file(".github/workflows/legado.jks")
+def resolvedReleaseStoreFile = project.findProperty("RELEASE_STORE_FILE") ? file(project.property("RELEASE_STORE_FILE")) : (bundledReleaseStoreFile.exists() ? bundledReleaseStoreFile : null)
+def resolvedReleaseKeyAlias = project.findProperty("RELEASE_KEY_ALIAS") ?: "legado"
+def resolvedReleaseStorePassword = project.findProperty("RELEASE_STORE_PASSWORD") ?: "gedoor_legado"
+def resolvedReleaseKeyPassword = project.findProperty("RELEASE_KEY_PASSWORD") ?: "gedoor_legado"
 try {
     def result = 'git rev-list HEAD --count'.execute().text.trim()
     if (result && result.isNumber()) {
@@ -45,12 +50,12 @@ android {
     }
 
     signingConfigs {
-        if (project.hasProperty("RELEASE_STORE_FILE")) {
+        if (resolvedReleaseStoreFile != null) {
             myConfig {
-                storeFile file(RELEASE_STORE_FILE)
-                storePassword RELEASE_STORE_PASSWORD
-                keyAlias RELEASE_KEY_ALIAS
-                keyPassword RELEASE_KEY_PASSWORD
+                storeFile resolvedReleaseStoreFile
+                storePassword resolvedReleaseStorePassword
+                keyAlias resolvedReleaseKeyAlias
+                keyPassword resolvedReleaseKeyPassword
                 enableV1Signing = true
                 enableV2Signing = true
                 enableV3Signing = true
@@ -87,9 +92,27 @@ android {
         buildConfig = true
         viewBinding = true
     }
+    flavorDimensions "app"
+    productFlavors {
+        appS {
+            dimension "app"
+            applicationId "io.legado.app.yuedu.a"
+            manifestPlaceholders = [app_name: "@string/app_name_a"]
+        }
+        appLegacy {
+            dimension "app"
+            applicationId "io.legado.app"
+            manifestPlaceholders = [app_name: "@string/app_name"]
+        }
+        appMax {
+            dimension "app"
+            applicationId "io.legado.app.yuedu"
+            manifestPlaceholders = [app_name: "@string/app_name"]
+        }
+    }
     buildTypes {
         release {
-            if (project.hasProperty("RELEASE_STORE_FILE")) {
+            if (resolvedReleaseStoreFile != null) {
                 signingConfig signingConfigs.myConfig
             }
             applicationIdSuffix '.release'
@@ -99,11 +122,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'cronet-proguard-rules.pro'
         }
         debug {
-            if (project.hasProperty("RELEASE_STORE_FILE")) {
+            if (resolvedReleaseStoreFile != null) {
                 signingConfig signingConfigs.myConfig
             }
             manifestPlaceholders.put("app_name", "@string/app_name_debug")
-    
+
             applicationIdSuffix '.debug'
             versionNameSuffix 'debug'
             // minifyEnabled true

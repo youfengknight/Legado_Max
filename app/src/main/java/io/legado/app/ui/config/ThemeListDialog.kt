@@ -25,6 +25,8 @@ class ThemeListDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
 
     private val binding by viewBinding(DialogRecyclerViewBinding::bind)
     private val adapter by lazy { Adapter(requireContext()) }
+    private var isMultiSelectMode = false
+    private val selectedPositions = mutableSetOf<Int>()
 
     override fun onStart() {
         super.onStart()
@@ -51,6 +53,13 @@ class ThemeListDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
         toolBar.menu.applyTint(requireContext())
     }
 
+    private fun initMultiSelectMenu() = binding.run {
+        toolBar.menu.clear()
+        toolBar.inflateMenu(R.menu.theme_list_multi)
+        toolBar.menu.applyTint(requireContext())
+        toolBar.setTitle(getString(R.string.selected, selectedPositions.size))
+    }
+
     fun initData() {
         adapter.setItems(ThemeConfig.configList)
     }
@@ -58,16 +67,98 @@ class ThemeListDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
     override fun onMenuItemClick(item: MenuItem?): Boolean {
         when (item?.itemId) {
             R.id.menu_import -> {
-                requireContext().getClipText()?.let {
-                    if (ThemeConfig.addConfig(it)) {
+                requireContext().getClipText()?.let { clipText ->
+                    val count = ThemeConfig.addConfig(clipText)
+                    if (count > 0) {
                         initData()
+                        toastOnUi("成功导入 $count 个主题")
                     } else {
                         toastOnUi("格式不对,添加失败")
                     }
+                } ?: toastOnUi("剪贴板为空")
+            }
+            R.id.menu_select_all -> {
+                if (selectedPositions.size == adapter.itemCount) {
+                    selectedPositions.clear()
+                } else {
+                    selectedPositions.clear()
+                    for (i in 0 until adapter.itemCount) {
+                        selectedPositions.add(i)
+                    }
                 }
+                adapter.notifyDataSetChanged()
+                binding.toolBar.setTitle(getString(R.string.selected, selectedPositions.size))
+            }
+            R.id.menu_export -> {
+                if (selectedPositions.isEmpty()) {
+                    toastOnUi("请先选择主题")
+                    return true
+                }
+                exportSelected()
+            }
+            R.id.menu_delete -> {
+                if (selectedPositions.isEmpty()) {
+                    toastOnUi("请先选择主题")
+                    return true
+                }
+                deleteSelected()
             }
         }
         return true
+    }
+
+    private fun enterMultiSelectMode(position: Int) {
+        isMultiSelectMode = true
+        selectedPositions.clear()
+        selectedPositions.add(position)
+        initMultiSelectMenu()
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun exitMultiSelectMode() {
+        isMultiSelectMode = false
+        selectedPositions.clear()
+        binding.toolBar.menu.clear()
+        initMenu()
+        binding.toolBar.setTitle(R.string.theme_list)
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun toggleSelection(position: Int) {
+        if (selectedPositions.contains(position)) {
+            selectedPositions.remove(position)
+            if (selectedPositions.isEmpty()) {
+                exitMultiSelectMode()
+                return
+            }
+        } else {
+            selectedPositions.add(position)
+        }
+        adapter.notifyItemChanged(position)
+        binding.toolBar.setTitle(getString(R.string.selected, selectedPositions.size))
+    }
+
+    private fun exportSelected() {
+        val configs = selectedPositions.sorted().map { index ->
+            ThemeConfig.configList[index]
+        }
+        val json = GSON.toJson(configs)
+        requireContext().share(json, "主题分享")
+        exitMultiSelectMode()
+    }
+
+    private fun deleteSelected() {
+        alert(R.string.delete, R.string.sure_del) {
+            yesButton {
+                val positions = selectedPositions.sortedDescending()
+                positions.forEach { position ->
+                    ThemeConfig.delConfig(position)
+                }
+                exitMultiSelectMode()
+                initData()
+            }
+            noButton()
+        }
     }
 
     fun delete(index: Int) {
@@ -100,19 +191,44 @@ class ThemeListDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
         ) {
             binding.apply {
                 tvName.text = item.themeName
+                if (isMultiSelectMode) {
+                    cbSelect.visibility = View.VISIBLE
+                    cbSelect.isChecked = selectedPositions.contains(holder.layoutPosition)
+                    ivShare.visibility = View.GONE
+                    ivDelete.visibility = View.GONE
+                } else {
+                    cbSelect.visibility = View.GONE
+                    ivShare.visibility = View.VISIBLE
+                    ivDelete.visibility = View.VISIBLE
+                }
             }
         }
 
         override fun registerListener(holder: ItemViewHolder, binding: ItemThemeConfigBinding) {
             binding.apply {
                 root.setOnClickListener {
-                    ThemeConfig.applyConfig(context, ThemeConfig.configList[holder.layoutPosition])
+                    val position = holder.layoutPosition
+                    if (isMultiSelectMode) {
+                        toggleSelection(position)
+                    } else {
+                        ThemeConfig.applyConfig(context, ThemeConfig.configList[position])
+                    }
+                }
+                root.setOnLongClickListener {
+                    if (!isMultiSelectMode) {
+                        enterMultiSelectMode(holder.layoutPosition)
+                    }
+                    true
                 }
                 ivShare.setOnClickListener {
-                    share(holder.layoutPosition)
+                    if (!isMultiSelectMode) {
+                        share(holder.layoutPosition)
+                    }
                 }
                 ivDelete.setOnClickListener {
-                    delete(holder.layoutPosition)
+                    if (!isMultiSelectMode) {
+                        delete(holder.layoutPosition)
+                    }
                 }
             }
         }

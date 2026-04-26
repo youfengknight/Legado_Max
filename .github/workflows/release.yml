@@ -6,7 +6,7 @@ on:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     outputs:
       version: ${{ steps.set-ver.outputs.version }}
     steps:
@@ -38,7 +38,7 @@ jobs:
 
       - name: 统一版本号
         run: |
-          sed "/def version/c def version = \"${{ env.VERSION }}\"" app/build.gradle.kts -i
+          sed "/def version/c def version = \"${{ env.VERSION }}\"" app/build.gradle -i
 
       - name: 配置 Gradle
         uses: gradle/actions/setup-gradle@v5

@@ -197,11 +197,11 @@ object BackupController {
             }
 
             // 导出阅读配置
-            GSON.toJson(ReadBookConfig.configList).let {
+            GSON.toJson(ReadBookConfig.getBackupConfigList()).let {
                 FileUtils.createFileIfNotExist(webBackupPath + File.separator + ReadBookConfig.configFileName)
                     .writeText(it)
             }
-            GSON.toJson(ReadBookConfig.shareConfig).let {
+            GSON.toJson(ReadBookConfig.getBackupShareConfig()).let {
                 FileUtils.createFileIfNotExist(webBackupPath + File.separator + ReadBookConfig.shareConfigFileName)
                     .writeText(it)
             }
@@ -258,6 +258,13 @@ object BackupController {
                             is String -> putString(key, value)
                         }
                     }
+                }
+            }
+
+            Backup.getBackgroundImageFiles().forEach { bgFile ->
+                val exportFile = File(webBackupPath, bgFile.name)
+                if (!exportFile.exists()) {
+                    bgFile.copyTo(exportFile)
                 }
             }
         }
@@ -383,6 +390,21 @@ object BackupController {
                     size = file.length()
                 ))
             }
+        }
+
+        val bgFiles = Backup.getBackgroundImageFiles()
+        val bgSize = bgFiles.sumOf { it.length() }
+        if (bgFiles.isNotEmpty()) {
+            totalSize += bgSize
+            items.add(
+                BackupItemInfo(
+                    fileName = "readConfigBgImages",
+                    displayName = "背景图片",
+                    description = "阅读背景使用的自定义图片文件",
+                    count = bgFiles.size,
+                    size = bgSize
+                )
+            )
         }
 
         return BackupOverview(

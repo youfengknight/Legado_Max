@@ -140,17 +140,24 @@ object ReadBookConfig {
     fun getAllPicBgStr(): ArrayList<String> {
         val list = arrayListOf<String>()
         configList.forEach {
-            if (it.bgType == 2) {
-                list.add(it.bgStr)
-            }
-            if (it.bgTypeNight == 2) {
-                list.add(it.bgStrNight)
-            }
-            if (it.bgTypeEInk == 2) {
-                list.add(it.bgStrEInk)
-            }
+            addPicBgStr(list, it)
+        }
+        if (::shareConfig.isInitialized) {
+            addPicBgStr(list, shareConfig)
         }
         return list
+    }
+
+    private fun addPicBgStr(list: MutableList<String>, config: Config) {
+        if (config.bgType == 2) {
+            list.add(config.bgStr)
+        }
+        if (config.bgTypeNight == 2) {
+            list.add(config.bgStrNight)
+        }
+        if (config.bgTypeEInk == 2) {
+            list.add(config.bgStrEInk)
+        }
     }
 
     fun deleteDur(): Boolean {
@@ -462,6 +469,27 @@ object ReadBookConfig {
             exportConfig.footerMode = shareConfig.footerMode
         }
         return exportConfig
+    }
+
+    fun getBackupConfigList(): List<Config> {
+        return configList.map { normalizeBgPathsForBackup(it.copy()) }
+    }
+
+    fun getBackupShareConfig(): Config {
+        return normalizeBgPathsForBackup(shareConfig.copy())
+    }
+
+    private fun normalizeBgPathsForBackup(config: Config): Config {
+        if (config.bgType == 2) {
+            config.bgStr = FileUtils.getName(config.bgStr)
+        }
+        if (config.bgTypeNight == 2) {
+            config.bgStrNight = FileUtils.getName(config.bgStrNight)
+        }
+        if (config.bgTypeEInk == 2) {
+            config.bgStrEInk = FileUtils.getName(config.bgStrEInk)
+        }
+        return config
     }
 
     fun import(byteArray: ByteArray): Config {

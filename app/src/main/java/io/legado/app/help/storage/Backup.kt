@@ -125,6 +125,30 @@ object Backup {
         )
     }
 
+    fun getBackgroundImageFiles(): List<File> {
+        return ReadBookConfig.getAllPicBgStr()
+            .mapNotNull { bg ->
+                val file = if (bg.contains(File.separator)) {
+                    File(bg)
+                } else {
+                    appCtx.externalFiles.getFile("bg", bg)
+                }
+                file.takeIf { it.exists() && it.isFile }
+            }
+            .distinctBy { it.absolutePath }
+    }
+
+    private fun getBackupPaths(): ArrayList<String> {
+        val paths = arrayListOf(*backupFileNames)
+        for (i in 0 until paths.size) {
+            paths[i] = backupPath + File.separator + paths[i]
+        }
+        getBackgroundImageFiles().forEach {
+            paths.add(it.absolutePath)
+        }
+        return paths
+    }
+
     /**
      * 生成备份ZIP文件名
      * 格式：backup{日期}-{设备名}.zip 或 backup{日期}.zip
@@ -245,11 +269,11 @@ object Backup {
         currentCoroutineContext().ensureActive()
 
         // 导出阅读配置
-        GSON.toJson(ReadBookConfig.configList).let {
+        GSON.toJson(ReadBookConfig.getBackupConfigList()).let {
             FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.configFileName)
                 .writeText(it)
         }
-        GSON.toJson(ReadBookConfig.shareConfig).let {
+        GSON.toJson(ReadBookConfig.getBackupShareConfig()).let {
             FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.shareConfigFileName)
                 .writeText(it)
         }
@@ -321,10 +345,7 @@ object Backup {
 
         // 打包成ZIP文件
         val zipFileName = getNowZipFileName()
-        val paths = arrayListOf(*backupFileNames)
-        for (i in 0 until paths.size) {
-            paths[i] = backupPath + File.separator + paths[i]
-        }
+        val paths = getBackupPaths()
         FileUtils.delete(zipFilePath)
         FileUtils.delete(zipFilePath.replace("tmp_", ""))
 
@@ -366,15 +387,7 @@ object Backup {
         currentCoroutineContext().ensureActive()
 
         // 上传背景图片到WebDav
-        ReadBookConfig.getAllPicBgStr().map {
-            if (it.contains(File.separator)) {
-                File(it)
-            } else {
-                appCtx.externalFiles.getFile("bg", it)
-            }
-        }.let {
-            AppWebDav.upBgs(it.toTypedArray())
-        }
+        AppWebDav.upBgs(getBackgroundImageFiles().toTypedArray())
     }
 
     /**
