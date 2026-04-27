@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TextDialog 最终布局原型</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: rgba(0,0,0,0.6);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .dialog {
+    width: 100%;
+    max-width: 650px;
+    max-height: 85vh;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ====== 工具栏（Toolbar） ====== */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 56px;
+    background: #1976d2;
+    color: #fff;
+    position: relative;
+  }
+
+  .toolbar-title {
+    font-size: 18px;
+    font-weight: 500;
+    flex: 1;
+  }
+
+  .toolbar-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .toolbar-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .toolbar-btn:hover {
+    background: rgba(255,255,255,0.15);
+  }
+
+  .toolbar-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+  }
+
+  /* ====== 帮助文档选择器 ====== */
+  .help-selector {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    gap: 10px;
+  }
+
+  .help-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+  }
+
+  .spinner-container {
+    position: relative;
+    flex: 1;
+  }
+
+  .spinner-btn {
+    width: 100%;
+    padding: 8px 32px 8px 12px;
+    background: #fff;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #444;
+    text-align: left;
+    transition: all 0.2s;
+  }
+
+  .spinner-btn:hover {
+    border-color: #1976d2;
+    background: #e8f4ff;
+  }
+
+  .spinner-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #888;
+    pointer-events: none;
+    transition: transform 0.2s;
+  }
+
+  .spinner-btn.active + .spinner-arrow {
+    transform: translateY(-50%) rotate(180deg);
+  }
+
+  /* 下拉菜单 */
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    max-height: 350px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+  }
+
+  .dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .dropdown-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #555;
+    transition: all 0.15s;
+    border-bottom: 1px solid #f5f5f5;
+  }
+
+  .dropdown-item:last-child {
+    border-bottom: none;
+  }
+
+  .dropdown-item:hover {
+    background: #e8f4ff;
+    color: #1976d2;
+  }
+
+  .dropdown-item.active {
+    background: #e3f2fd;
+    color: #1565c0;
+    font-weight: 500;
+  }
+
+  /* ====== 内容区域 ====== */
+  .content-area {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #fafafa;
+    line-height: 1.8;
+  }
+
+  .markdown-content h1 {
+    font-size: 22px;
+    margin-bottom: 16px;
+    color: #222;
+    border-bottom: 2px solid #1976d2;
+    padding-bottom: 8px;
+  }
+
+  .markdown-content h2 {
+    font-size: 18px;
+    margin: 20px 0 12px;
+    color: #444;
+  }
+
+  .markdown-content p {
+    margin-bottom: 12px;
+    color: #333;
+  }
+
+  .markdown-content code {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    color: #c7254e;
+  }
+
+  .markdown-content pre {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+
+  .markdown-content pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
+
+  /* ====== 底部操作栏 ====== */
+  .dialog-footer {
+    padding: 12px 20px;
+    background: #f5f5f5;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  .btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary {
+    background: #e0e0e0;
+    color: #555;
+  }
+
+  .btn-secondary:hover { background: #d0d0d0; }
+
+  .btn-primary {
+    background: #1976d2;
+    color: #fff;
+  }
+
+  .btn-primary:hover { background: #1565c0; }
+
+  /* 动画 */
+  .fade-in {
+    animation: fadeIn 0.25s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 滚动条 */
+  .dropdown-menu::-webkit-scrollbar { width: 6px; }
+  .dropdown-menu::-webkit-scrollbar-track { background: #f5f5f5; border-radius: 3px; }
+  .dropdown-menu::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+  .dropdown-menu::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+  /* ====== 信息提示框 ====== */
+  .info-box {
+    margin-top: 20px;
+    padding: 14px;
+    background: #e3f2fd;
+    border-left: 4px solid #1976d2;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #1565c0;
+  }
+
+  .info-box strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="dialog">
+  <!-- ====== 工具栏 ====== -->
+  <div class="toolbar">
+    <div class="toolbar-title">帮助</div>
+    <div class="toolbar-actions">
+      <!-- 打开到编辑器按钮 -->
+      <button class="toolbar-btn" onclick="openEditor()" title="打开到编辑器">
+        <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+      </button>
+      <!-- 关闭按钮 -->
+      <button class="toolbar-btn" onclick="closeDialog()" title="关闭">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ====== 帮助文档选择器 ====== -->
+  <div class="help-selector">
+    <div class="help-label">帮助</div>
+    <div class="spinner-container">
+      <button class="spinner-btn" onclick="toggleDropdown()">
+        <span id="currentDoc">js变量和函数</span>
+      </button>
+      <div class="spinner-arrow" id="arrow"></div>
+      
+      <div class="dropdown-menu" id="dropdownMenu">
+        <div class="dropdown-item" onclick="selectDoc('appHelp', 'APP帮助文档')">📱 APP帮助文档</div>
+        <div class="dropdown-item" onclick="selectDoc('ruleHelp', '书源制作教程')">📚 书源制作教程</div>
+        <div class="dropdown-item" onclick="selectDoc('rssRuleHelp', '订阅源教程')">📰 订阅源教程</div>
+        <div class="dropdown-item active" onclick="selectDoc('jsHelp', 'js变量和函数')">📝 js变量和函数</div>
+        <div class="dropdown-item" onclick="selectDoc('xpathHelp', 'xpath语法教程')">🔍 xpath语法教程</div>
+        <div class="dropdown-item" onclick="selectDoc('regexHelp', '正则表达式教程')">🔧 正则表达式教程</div>
+        <div class="dropdown-item" onclick="selectDoc('txtTocRuleHelp', 'txt目录正则说明')">📄 txt目录正则说明</div>
+        <div class="dropdown-item" onclick="selectDoc('debugHelp', '书源调试说明')">🐛 书源调试说明</div>
+        <div class="dropdown-item" onclick="selectDoc('httpTTSHelp', '在线朗读规则')">🔊 在线朗读规则</div>
+        <div class="dropdown-item" onclick="selectDoc('webDavBookHelp', 'WebDav书籍使用教程')">☁️ WebDav书籍使用教程</div>
+        <div class="dropdown-item" onclick="selectDoc('webDavHelp', 'WebDav备份教程')">💾 WebDav备份教程</div>
+        <div class="dropdown-item" onclick="selectDoc('readMenuHelp', '阅读菜单说明')">📖 阅读菜单说明</div>
+        <div class="dropdown-item" onclick="selectDoc('dictRuleHelp', '字典规则说明')">📕 字典规则说明</div>
+        <div class="dropdown-item" onclick="selectDoc('replaceRuleHelp', '替换规则说明')">🔄 替换规则说明</div>
+        <div class="dropdown-item" onclick="selectDoc('SourceMBookHelp', '书源说明')">📑 书源说明</div>
+        <div class="dropdown-item" onclick="selectDoc('SourceMRssHelp', 'RSS源说明')">📡 RSS源说明</div>
+        <div class="dropdown-item" onclick="selectDoc('ExtensionContentType', '扩展内容类型')">🧩 扩展内容类型</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 内容区域 ====== -->
+  <div class="content-area">
+    <div class="markdown-content" id="contentArea">
+      <h1># js变量和函数</h1>
+      <p>阅读使用 <code>Rhino v1.8.1</code> 作为JavaScript引擎，用于在JS中调用Java类和方法。</p>
+      
+      <h2>## 内置变量</h2>
+      <p>在书源规则中使用 <code>@js</code> <code>&lt;js&gt;</code> <code>{{}}</code> 可使用JavaScript调用阅读内置的类和方法。</p>
+      
+      <pre><code>java - 当前类
+baseUrl - 当前url
+result - 上一步的结果
+book - 书籍类
+chapter - 章节类
+source - 基础书源类
+cookie - cookie操作类
+cache - 缓存操作类</code></pre>
+
+      <h2>## 常用函数</h2>
+      <p>网络请求：</p>
+      <pre><code>java.ajax(urlStr) // GET请求
+java.post(url, body, headerMap) // POST请求
+java.connect(urlStr, header) // 完整请求</code></pre>
+
+      <div class="info-box">
+        <strong>💡 提示</strong>
+        点击右上角的 <code>&lt;/&gt;</code> 按钮可将当前文档打开到编辑器进行全屏查看和编辑。切换帮助文档后，打开的内容会同步更新。
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 底部 ====== -->
+  <div class="dialog-footer">
+    <button class="btn btn-primary">关闭</button>
+  </div>
+</div>
+
+<script>
+  let currentContent = '';
+
+  // 初始化当前内容
+  function initContent() {
+    currentContent = document.getElementById('contentArea').innerHTML;
+  }
+
+  // 切换下拉菜单
+  function toggleDropdown() {
+    const menu = document.getElementById('dropdownMenu');
+    const btn = document.querySelector('.spinner-btn');
+    const arrow = document.getElementById('arrow');
+    menu.classList.toggle('show');
+    btn.classList.toggle('active');
+    arrow.style.transform = menu.classList.contains('show') 
+      ? 'translateY(-50%) rotate(180deg)' 
+      : 'translateY(-50%)';
+  }
+
+  // 选择文档
+  function selectDoc(fileName, displayName) {
+    // 更新显示
+    document.getElementById('currentDoc').textContent = displayName;
+    
+    // 更新高亮
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.classList.remove('active');
+      if (item.textContent.includes(displayName)) {
+        item.classList.add('active');
+      }
+    });
+    
+    // 关闭下拉菜单
+    toggleDropdown();
+    
+    // 模拟加载新内容（带淡入）
+    const contentArea = document.getElementById('contentArea');
+    contentArea.style.opacity = '0';
+    contentArea.style.transform = 'translateY(8px)';
+    
+    setTimeout(() => {
+      // 这里是模拟的内容，实际应该从assets读取
+      currentContent = `
+        <h1># ${displayName}</h1>
+        <p>这是 <strong>${displayName}</strong> (${fileName}.md) 的内容...</p>
+        <pre><code>// 示例代码
+console.log("Hello ${displayName}");</code></pre>
+        <div class="info-box">
+          <strong>💡 提示</strong>
+          当前显示的是: ${displayName}<br>
+          文件路径: assets/web/help/md/${fileName}.md<br>
+          点击右上角 <code>&lt;/&gt;</code> 打开此内容到编辑器
+        </div>
+      `;
+      
+      contentArea.innerHTML = currentContent;
+      contentArea.style.transition = 'all 0.25s ease';
+      contentArea.style.opacity = '1';
+      contentArea.style.transform = 'translateY(0)';
+    }, 150);
+  }
+
+  // 打开编辑器
+  function openEditor() {
+    alert(`正在打开到编辑器...\n\n内容长度: ${currentContent.length} 字符\n\n这是当前显示的文档内容，切换帮助文档后这里会是新文档的内容。`);
+  }
+
+  // 关闭对话框
+  function closeDialog() {
+    alert('关闭对话框');
+  }
+
+  // 点击外部关闭菜单
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.spinner-container')) {
+      const menu = document.getElementById('dropdownMenu');
+      const btn = document.querySelector('.spinner-btn');
+      const arrow = document.getElementById('arrow');
+      menu.classList.remove('show');
+      btn.classList.remove('active');
+      arrow.style.transform = 'translateY(-50%)';
+    }
+  });
+
+  // 初始化
+  initContent();
+</script>
+
+</body>
+</html>
