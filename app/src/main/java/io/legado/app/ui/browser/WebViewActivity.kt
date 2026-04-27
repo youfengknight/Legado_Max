@@ -65,6 +65,7 @@ import androidx.core.graphics.createBitmap
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
 import io.legado.app.ui.widget.dialog.CookieViewerDialog
+import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 
 /**
