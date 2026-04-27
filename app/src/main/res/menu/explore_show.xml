@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_page"
+        android:title="@string/menu_page"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_add_all_to_shelf"
+        android:title="@string/add_all_to_shelf"
+        app:showAsAction="never" />
+
+</menu>

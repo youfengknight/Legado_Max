@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.explore
 
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
 import androidx.activity.viewModels
@@ -41,24 +42,46 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
     private val loadMoreViewTop by lazy { LoadMoreView(this) }
     private var oldPage = -1
     private var isClearAll = false
-    //添加"全部加入书架"菜单
-    private val menuAddAllToShelf by lazy {
-        binding.titleBar.menu.add(getString(R.string.add_all_to_shelf)).apply {
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            setOnMenuItemClickListener {
-                showDialogFragment(GroupSelectDialog(0, REQUEST_CODE_ADD_ALL_TO_SHELF))
-                true
+    private var menuPage: MenuItem? = null
+
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        binding.titleBar.title = intent.getStringExtra("exploreName")
+        initRecyclerView()
+        viewModel.booksData.observe(this) { upData(it) }
+        viewModel.addBooksData.observe(this) { upDataTop(it) }
+        viewModel.initData(intent)
+        viewModel.errorLiveData.observe(this) {
+            loadMoreView.error(it)
+        }
+        viewModel.errorTopLiveData.observe(this) {
+            loadMoreViewTop.error(it)
+        }
+        viewModel.upAdapterLiveData.observe(this) {
+            adapter.notifyItemRangeChanged(0, adapter.itemCount, bundleOf(it to null))
+        }
+        viewModel.pageLiveData.observe(this) {
+            menuPage?.title = getString(R.string.menu_page, it)
+        }
+        viewModel.addAllToShelfResult.observe(this) { count ->
+            if (count == 0) {
+                toastOnUi(R.string.all_books_in_shelf)
+            } else {
+                toastOnUi(getString(R.string.add_books_success, count))
             }
         }
     }
 
-    //右上角"第X页"菜单
-    private val menuPage by lazy {
-        binding.titleBar.menu.add(getString(R.string.menu_page, 1)).apply {
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            setOnMenuItemClickListener {
+    override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.explore_show, menu)
+        menuPage = menu.findItem(R.id.menu_page)
+        return super.onCompatCreateOptionsMenu(menu)
+    }
+
+    override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.menu_page -> {
                 val page = viewModel.pageLiveData.value ?: 1
-                NumberPickerDialog(this@ExploreShowActivity)
+                NumberPickerDialog(this)
                     .setTitle(getString(R.string.change_page))
                     .setMaxValue(999)
                     .setMinValue(1)
@@ -85,40 +108,12 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
                             }
                         }
                     }
-                true
+            }
+            R.id.menu_add_all_to_shelf -> {
+                showDialogFragment(GroupSelectDialog(0, REQUEST_CODE_ADD_ALL_TO_SHELF))
             }
         }
-    }
-
-    /**
-     * Activity创建时调用，页面初始化
-     */
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        binding.titleBar.title = intent.getStringExtra("exploreName")
-        menuAddAllToShelf
-        initRecyclerView()
-        viewModel.booksData.observe(this) { upData(it) }
-        viewModel.addBooksData.observe(this) { upDataTop(it) }
-        viewModel.initData(intent)
-        viewModel.errorLiveData.observe(this) {
-            loadMoreView.error(it)
-        }
-        viewModel.errorTopLiveData.observe(this) {
-            loadMoreViewTop.error(it)
-        }
-        viewModel.upAdapterLiveData.observe(this) {
-            adapter.notifyItemRangeChanged(0, adapter.itemCount, bundleOf(it to null))
-        }
-        viewModel.pageLiveData.observe(this) {
-            menuPage.title = getString(R.string.menu_page, it)
-        }
-        viewModel.addAllToShelfResult.observe(this) { count ->
-            if (count == 0) {
-                toastOnUi(R.string.all_books_in_shelf)
-            } else {
-                toastOnUi(getString(R.string.add_books_success, count))
-            }
-        }
+        return super.onCompatOptionsItemSelected(item)
     }
 
     private fun initRecyclerView() {
