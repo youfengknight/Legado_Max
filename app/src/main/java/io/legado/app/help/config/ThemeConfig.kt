@@ -91,7 +91,7 @@ object ThemeConfig {
     /**
      * 获取链接获取图片文件名
      */
-    private fun getUrlToFile(url: String): String {
+    fun getUrlToFile(url: String): String {
         val suffix = when {
             url.contains(".9.png", ignoreCase = true) -> ".9.png"
             url.contains(".png", ignoreCase = true) -> ".png"

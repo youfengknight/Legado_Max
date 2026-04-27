@@ -330,6 +330,9 @@ object Restore {
             }
         }
 
+        // 恢复主题背景图片
+        restoreThemeBackgrounds(path)
+
         // 恢复SharedPreferences配置（应用主配置）
         appCtx.getSharedPreferences(path, "config")?.all?.let { map ->
             val edit = appCtx.defaultSharedPreferences.edit()
@@ -469,6 +472,50 @@ object Restore {
         }
         if (config.bgTypeEInk == 2) {
             bgNames.add(File(config.bgStrEInk).name)
+        }
+    }
+
+    private fun restoreThemeBackgrounds(backupPath: String) {
+        // 从 config.xml 中读取主题背景图片路径
+        val configSp = appCtx.getSharedPreferences(backupPath, "config") ?: return
+        
+        // 恢复白天主题背景
+        configSp.getString(PreferKey.bgImage, null)?.let { bgPath ->
+            restoreThemeBgFile(backupPath, bgPath, PreferKey.bgImage)
+        }
+        
+        // 恢复夜间主题背景
+        configSp.getString(PreferKey.bgImageN, null)?.let { bgPath ->
+            restoreThemeBgFile(backupPath, bgPath, PreferKey.bgImageN)
+        }
+    }
+    
+    private fun restoreThemeBgFile(backupPath: String, bgPath: String, prefKey: String) {
+        if (bgPath.isBlank()) return
+        
+        val bgFile = if (bgPath.startsWith("http")) {
+            // 在线图片，文件名从 URL 计算
+            val name = ThemeConfig.getUrlToFile(bgPath)
+            appCtx.externalFiles.getFile(prefKey, name)
+        } else if (bgPath.contains(File.separator)) {
+            // 本地路径，提取文件名
+            val name = File(bgPath).name
+            appCtx.externalFiles.getFile(prefKey, name)
+        } else {
+            // 已经是文件名
+            appCtx.externalFiles.getFile(prefKey, bgPath)
+        }
+        
+        // 从备份目录复制文件
+        val bgName = File(bgPath).name
+        val backupFile = File(backupPath, bgName)
+        if (backupFile.exists() && backupFile.isFile) {
+            val targetDir = appCtx.externalFiles.getFile(prefKey)
+            if (!targetDir.exists()) {
+                targetDir.mkdirs()
+            }
+            backupFile.copyTo(File(targetDir, bgName), overwrite = true)
+            LogUtils.d(TAG, "恢复主题背景: $bgName -> ${bgFile.absolutePath}")
         }
     }
 

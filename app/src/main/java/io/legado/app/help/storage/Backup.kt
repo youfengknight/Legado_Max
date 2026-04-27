@@ -24,6 +24,7 @@ import io.legado.app.utils.createFolderIfNotExist
 import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.getFile
+import io.legado.app.utils.getPrefString
 import io.legado.app.utils.getSharedPreferences
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.normalizeFileName
@@ -126,16 +127,58 @@ object Backup {
     }
 
     fun getBackgroundImageFiles(): List<File> {
-        return ReadBookConfig.getAllPicBgStr()
-            .mapNotNull { bg ->
-                val file = if (bg.contains(File.separator)) {
-                    File(bg)
-                } else {
-                    appCtx.externalFiles.getFile("bg", bg)
-                }
-                file.takeIf { it.exists() && it.isFile }
+        val files = mutableListOf<File>()
+        
+        // 阅读界面背景图片
+        val bgStrList = ReadBookConfig.getAllPicBgStr()
+        LogUtils.d(TAG, "阅读背景 getAllPicBgStr 返回: $bgStrList")
+        bgStrList.mapNotNull { bg ->
+            LogUtils.d(TAG, "处理阅读背景: $bg")
+            val file = if (bg.contains(File.separator)) {
+                File(bg)
+            } else {
+                appCtx.externalFiles.getFile("bg", bg)
             }
-            .distinctBy { it.absolutePath }
+            LogUtils.d(TAG, "阅读背景文件路径: ${file.absolutePath}, 存在: ${file.exists()}, 是文件: ${file.isFile}")
+            file.takeIf { it.exists() && it.isFile }
+        }.let { files.addAll(it) }
+        
+        // 主题背景图片
+        val themeBgPath = appCtx.getPrefString(PreferKey.bgImage)
+        LogUtils.d(TAG, "主题白天背景路径: $themeBgPath")
+        themeBgPath?.let { path ->
+            val file = if (path.startsWith("http")) {
+                val name = ThemeConfig.getUrlToFile(path)
+                appCtx.externalFiles.getFile(PreferKey.bgImage, name)
+            } else if (path.contains(File.separator)) {
+                File(path)
+            } else {
+                appCtx.externalFiles.getFile(PreferKey.bgImage, path)
+            }
+            LogUtils.d(TAG, "主题白天背景文件: ${file.absolutePath}, 存在: ${file.exists()}, 是文件: ${file.isFile}")
+            if (file.exists() && file.isFile) {
+                files.add(file)
+            }
+        }
+        
+        val themeBgNightPath = appCtx.getPrefString(PreferKey.bgImageN)
+        LogUtils.d(TAG, "主题夜间背景路径: $themeBgNightPath")
+        themeBgNightPath?.let { path ->
+            val file = if (path.startsWith("http")) {
+                val name = ThemeConfig.getUrlToFile(path)
+                appCtx.externalFiles.getFile(PreferKey.bgImageN, name)
+            } else if (path.contains(File.separator)) {
+                File(path)
+            } else {
+                appCtx.externalFiles.getFile(PreferKey.bgImageN, path)
+            }
+            LogUtils.d(TAG, "主题夜间背景文件: ${file.absolutePath}, 存在: ${file.exists()}, 是文件: ${file.isFile}")
+            if (file.exists() && file.isFile) {
+                files.add(file)
+            }
+        }
+        
+        return files.distinctBy { it.absolutePath }
     }
 
     private fun getBackupPaths(): ArrayList<String> {
@@ -143,7 +186,10 @@ object Backup {
         for (i in 0 until paths.size) {
             paths[i] = backupPath + File.separator + paths[i]
         }
-        getBackgroundImageFiles().forEach {
+        val bgFiles = getBackgroundImageFiles()
+        LogUtils.d(TAG, "背景图片文件数量: ${bgFiles.size}")
+        bgFiles.forEach {
+            LogUtils.d(TAG, "添加背景图片: ${it.absolutePath}")
             paths.add(it.absolutePath)
         }
         return paths
