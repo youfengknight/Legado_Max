@@ -5,11 +5,17 @@ import android.content.ComponentName
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
+import androidx.appcompat.widget.SearchView
+import androidx.core.view.MenuProvider
 import androidx.core.view.postDelayed
 import androidx.fragment.app.activityViewModels
 import androidx.preference.ListPreference
 import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
 import com.jeremyliao.liveeventbus.LiveEventBus
 import io.legado.app.R
 import io.legado.app.constant.EventBus
@@ -32,6 +38,7 @@ import io.legado.app.ui.video.config.SettingsDialog
 import io.legado.app.ui.widget.code.addJsonPattern
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.utils.LogUtils
+import io.legado.app.utils.applyTint
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.postEvent
@@ -47,7 +54,8 @@ import splitties.init.appCtx
  * 其它设置
  */
 class OtherConfigFragment : PreferenceFragment(),
-    SharedPreferences.OnSharedPreferenceChangeListener {
+    SharedPreferences.OnSharedPreferenceChangeListener,
+    MenuProvider {
 
     private val viewModel by activityViewModels<ConfigViewModel>()
     private val packageManager = appCtx.packageManager
@@ -88,6 +96,7 @@ class OtherConfigFragment : PreferenceFragment(),
         activity?.setTitle(R.string.other_setting)
         preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(this)
         listView.setEdgeEffectColor(primaryColor)
+        activity?.addMenuProvider(this, viewLifecycleOwner)
     }
 
     override fun onDestroy() {
@@ -427,6 +436,76 @@ class OtherConfigFragment : PreferenceFragment(),
             "${token.take(4)}****${token.takeLast(4)}"
         } else {
             "****"
+        }
+    }
+
+    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+        menuInflater.inflate(R.menu.config_other, menu)
+        menu.applyTint(requireContext())
+        val searchItem = menu.findItem(R.id.menu_search)
+        val searchView = searchItem?.actionView as? SearchView
+        searchView?.apply {
+            queryHint = getString(R.string.search)
+            setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    filterPreferences(newText ?: "")
+                    return true
+                }
+            })
+        }
+    }
+
+    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+        return false
+    }
+
+    private fun filterPreferences(query: String) {
+        val lowerQuery = query.lowercase()
+        var firstMatchIndex = -1
+        var currentIndex = 0
+
+        for (i in 0 until preferenceScreen.preferenceCount) {
+            val category = preferenceScreen.getPreference(i)
+            if (category is PreferenceCategory) {
+                var hasVisibleChild = false
+                for (j in 0 until category.preferenceCount) {
+                    val preference = category.getPreference(j)
+                    val title = preference.title?.toString()?.lowercase() ?: ""
+                    val summary = preference.summary?.toString()?.lowercase() ?: ""
+                    val matches = query.isEmpty() || title.contains(lowerQuery) || summary.contains(lowerQuery)
+                    preference.isVisible = matches
+                    if (matches) {
+                        hasVisibleChild = true
+                        if (firstMatchIndex < 0) {
+                            firstMatchIndex = currentIndex
+                        }
+                    }
+                    currentIndex++
+                }
+                category.isVisible = hasVisibleChild || query.isEmpty()
+                if (category.isVisible) {
+                    currentIndex++
+                }
+            } else {
+                val title = category.title?.toString()?.lowercase() ?: ""
+                val summary = category.summary?.toString()?.lowercase() ?: ""
+                val matches = query.isEmpty() || title.contains(lowerQuery) || summary.contains(lowerQuery)
+                category.isVisible = matches
+                if (matches && firstMatchIndex < 0) {
+                    firstMatchIndex = currentIndex
+                }
+                currentIndex++
+            }
+        }
+
+        if (firstMatchIndex >= 0) {
+            listView.post {
+                listView.smoothScrollToPosition(firstMatchIndex)
+            }
         }
     }
 
