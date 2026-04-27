@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 
 @Suppress("MemberVisibilityCanBePrivate", "unused")
-class FastScrollRecyclerView : RecyclerView {
+open class FastScrollRecyclerView : RecyclerView {
 
     private lateinit var mFastScroller: FastScroller
 
@@ -22,11 +22,17 @@ class FastScrollRecyclerView : RecyclerView {
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
     }
 
-    @JvmOverloads
     constructor(
         context: Context,
-        attrs: AttributeSet,
-        defStyleAttr: Int = 0
+        attrs: AttributeSet?
+    ) : super(context, attrs) {
+        layout(context, attrs)
+    }
+
+    constructor(
+        context: Context,
+        attrs: AttributeSet?,
+        defStyleAttr: Int
     ) : super(context, attrs, defStyleAttr) {
         layout(context, attrs)
     }

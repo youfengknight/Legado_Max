@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.res.AssetManager
 
 object HelpDocManager {
-    
+    // 帮助文档切换列表，不是所有的
     val allHelpDocs = listOf(
         HelpDoc("appHelp", "APP帮助文档"),
         HelpDoc("ruleHelp", "书源制作教程"),

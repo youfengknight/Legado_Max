@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
 import android.graphics.Paint.FontMetrics
+import android.graphics.Path
 import android.os.Build
 import android.text.TextPaint
 import androidx.annotation.Keep
@@ -250,6 +251,33 @@ data class TextLine(
                 lineY,
                 dashPath
             )
+        } else if (underlineMode == 3) { // 波浪线
+            val path = Path()
+            val startX = lineStart + indentWidth
+            val endX = lineEnd
+            val waveAmplitude = 3.dpToPx().toFloat() // 波浪振幅
+            val waveLength = 12.dpToPx().toFloat() // 波浪长度
+            
+            path.moveTo(startX, lineY)
+            var currentX = startX
+            
+            while (currentX < endX) {
+                val nextX = (currentX + waveLength).coerceAtMost(endX)
+                val midX = (currentX + nextX) / 2
+                
+                // 绘制波浪的上下半部分
+                path.quadTo(midX, lineY - waveAmplitude, nextX, lineY)
+                currentX = nextX
+                
+                if (currentX < endX) {
+                    val nextX2 = (currentX + waveLength).coerceAtMost(endX)
+                    val midX2 = (currentX + nextX2) / 2
+                    path.quadTo(midX2, lineY + waveAmplitude, nextX2, lineY)
+                    currentX = nextX2
+                }
+            }
+            
+            canvas.drawPath(path, paint)
         }
     }
 

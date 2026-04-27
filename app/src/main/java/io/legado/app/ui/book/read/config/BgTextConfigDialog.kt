@@ -154,7 +154,7 @@ class BgTextConfigDialog : BaseDialogFragment(R.layout.dialog_read_bg_text) {
         if (ReadBook.book?.isImage == true) {
             spUnderline.isGone = true
         } else {
-            val textStyles = arrayOf("关闭", "实线", "虚线")
+            val textStyles = arrayOf("关闭", "实线", "虚线", "波浪")
             val adapter = object : ArrayAdapter<String>(requireContext(), R.layout.item_text_common, textStyles) {
                 override fun getDropDownView(
                     position: Int,

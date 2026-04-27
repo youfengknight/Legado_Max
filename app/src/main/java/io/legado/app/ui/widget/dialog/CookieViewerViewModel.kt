@@ -45,8 +45,10 @@ class CookieViewerViewModel(application: Application) : BaseViewModel(applicatio
             // 从WebView CookieManager获取浏览器层的Cookie
             val webCookieManager = CookieManager.getInstance()
             val webViewCookie = webCookieManager.getCookie(url)
-            if (webViewCookie.isNotBlank()) {
-                cookies.add("")  // 添加空行分隔
+            if (!webViewCookie.isNullOrBlank()) {
+                if (cookies.isNotEmpty()) {
+                    cookies.add("")  // 添加空行分隔
+                }
                 webViewCookie.splitNotBlank(";").forEach { cookie ->
                     val trimmed = cookie.trim()
                     if (trimmed.isNotEmpty()) {

@@ -64,6 +64,9 @@ import java.net.URLDecoder
 import androidx.core.graphics.createBitmap
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
+import io.legado.app.ui.widget.dialog.CookieViewerDialog
+import io.legado.app.utils.showDialogFragment
+import io.legado.app.utils.toastOnUi
 
 /**
  * WebView 浏览器活动
@@ -197,6 +200,9 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             R.id.menu_web_refresh -> refresh()
             R.id.menu_open_in_browser -> openUrl(viewModel.baseUrl)
             R.id.menu_copy_url -> sendToClip(viewModel.baseUrl)
+            R.id.menu_view_cookie -> currentWebView.url?.let {
+                showDialogFragment(CookieViewerDialog(it))
+            } ?: toastOnUi("url null")
             R.id.menu_ok -> {
                 if (viewModel.sourceVerificationEnable) {
                     viewModel.saveVerificationResult(currentWebView) {
