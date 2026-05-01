@@ -192,6 +192,9 @@ object WebViewPool {
             clearDisappearingChildren() //清除消失中的子视图
             clearAnimation() //清除动画
             // 切换回应用上下文
+            setTag(R.id.inline_content_lock_parent_scroll, false)
+            isFocusable = true
+            isFocusableInTouchMode = true
             pooledWebView.upContext(appCtx)
             if (idlePool.size >= CACHED_WEB_VIEW_MAX_NUM - inUsePool.size) {
                 // 池子已满，直接销毁
@@ -240,6 +243,9 @@ object WebViewPool {
     fun prepareForInlineContent(webView: WebView, initialHeight: Int = 0) {
         // 递增代次，使之前的回调失效
         nextInlineContentGeneration(webView)
+        webView.setTag(R.id.inline_content_lock_parent_scroll, true)
+        webView.isFocusable = false
+        webView.isFocusableInTouchMode = false
         // 设置透明背景，让 HTML 中的背景色生效
         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         // 禁用过度滚动效果

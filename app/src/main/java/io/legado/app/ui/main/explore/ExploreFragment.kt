@@ -311,6 +311,7 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
 
     override fun openExplore(sourceUrl: String, title: String, exploreUrl: String?) {
         if (exploreUrl.isNullOrBlank()) return
+        adapter.clearPendingScrollToSource()
         startActivity<ExploreShowActivity> {
             putExtra("exploreName", title)
             putExtra("sourceUrl", sourceUrl)

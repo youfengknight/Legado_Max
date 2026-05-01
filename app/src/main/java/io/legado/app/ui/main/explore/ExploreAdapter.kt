@@ -136,6 +136,10 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         anchor?.post(scrollAction) ?: scrollAction()
     }
 
+    fun clearPendingScrollToSource() {
+        scrollToSourceUrl = null
+    }
+
     /**
      * 创建视图绑定对象
      * 用于 RecyclerView 的 ViewHolder 创建
@@ -914,9 +918,6 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         val cachedHeight = exploreWebViewHeightCache[pageLayoutKey]?.takeIf { it > 1 }
         val loadingHeight = 120.dpToPx()
         prepareForInlineContent(webView, cachedHeight ?: loadingHeight)
-        installInlineContentRefitOnTouch(webView) {
-            container.requestLayout()
-        }
         val loadingIndicator = createLoadingIndicator(container)
         container.addView(loadingIndicator)
         webView.invisible()
@@ -928,6 +929,13 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
             pageLayoutKey,
             loadingIndicator
         )
+        installInlineContentRefitOnTouch(webView) {
+            val height = webView.layoutParams?.height ?: 0
+            if (height > 1) {
+                exploreWebViewHeightCache.put(pageLayoutKey, height)
+            }
+            container.requestLayout()
+        }
         webView.addJavascriptInterface(WebCacheManager, nameCache)
         source?.let {
             webView.addJavascriptInterface(it as BaseSource, nameSource)
@@ -1496,6 +1504,7 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
             loadingIndicator.gone()
             webView.visible()
             container.requestLayout()
+            completePendingScrollToSource(sourceUrl, container)
         }
 
         private fun fitAndCacheHeight(webView: WebView, delayed: Boolean) {
