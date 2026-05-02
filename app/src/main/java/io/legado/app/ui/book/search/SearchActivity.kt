@@ -328,16 +328,9 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
      * 处理传入数据
      */
     private fun receiptIntent(intent: Intent? = null) {
-        val sourceKey = intent?.getStringExtra("sourceKey")
-        if (!sourceKey.isNullOrBlank()) {
-            appDb.bookSourceDao.getBookSource(sourceKey)?.let { source ->
-                viewModel.searchScope.update(source, postValue = false, save = false)
-            }
-        } else {
-            val searchScope = intent?.getStringExtra("searchScope")
-            searchScope?.let {
-                viewModel.searchScope.update(searchScope, postValue = false, save = false)
-            }
+        val searchScope = intent?.getStringExtra("searchScope")
+        searchScope?.let {
+            viewModel.searchScope.update(searchScope, postValue = false, save = false)
         }
         val key = intent?.getStringExtra("key")
         if (key.isNullOrBlank()) {
@@ -558,14 +551,14 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         fun start(context: Context, source: BookSource, key: String? = null) {
             context.startActivity<SearchActivity> {
                 putExtra("key", key)
-                putExtra("sourceKey", source.bookSourceUrl)
+                putExtra("searchScope", SearchScope(source).toString())
             }
         }
 
         fun start(context: Context, source: BookSourcePart, key: String? = null) {
             context.startActivity<SearchActivity> {
                 putExtra("key", key)
-                putExtra("sourceKey", source.bookSourceUrl)
+                putExtra("searchScope", SearchScope(source).toString())
             }
         }
 
