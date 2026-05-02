@@ -21,19 +21,25 @@
         app:layout_constraintTop_toBottomOf="@+id/title_bar"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerViewAtPager2
-            android:id="@+id/rv_bookshelf"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingTop="0dp"
-            android:paddingBottom="0dp"
-            android:paddingLeft="8dp"
-            android:paddingRight="8dp"
-            android:scrollbars="vertical"
-            app:fadeScrollbar="true"
-            app:showBubble="false"
-            app:showTrack="true"
-            tools:listitem="@layout/item_bookshelf_list" />
+            android:layout_height="match_parent">
+
+            <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerViewAtPager2
+                android:id="@+id/rv_bookshelf"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:scrollbars="vertical"
+                app:fadeScrollbar="true"
+                app:showBubble="false"
+                app:showTrack="true"
+                tools:listitem="@layout/item_bookshelf_list" />
+
+        </FrameLayout>
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 

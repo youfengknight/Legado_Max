@@ -20,7 +20,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
-import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -60,6 +59,7 @@ class FastScroller : LinearLayout {
     private var mTrackImage: Drawable? = null
     private var mFastScrollStateChangeListener: FastScrollStateChangeListener? = null
     private val mScrollbarHider = Runnable { this.hideScrollbar() }
+    private var alignToLeft = false
 
     private val mScrollListener = object : RecyclerView.OnScrollListener() {
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -112,6 +112,7 @@ class FastScroller : LinearLayout {
         val marginTop = resources.getDimensionPixelSize(R.dimen.fastscroll_scrollbar_margin_top)
         val marginBottom =
             resources.getDimensionPixelSize(R.dimen.fastscroll_scrollbar_margin_bottom)
+        alignToLeft = shouldAlignToLeft()
         require(recyclerViewId != View.NO_ID) { "RecyclerView must have a view ID" }
         when (viewGroup) {
             is ConstraintLayout -> {
@@ -130,12 +131,21 @@ class FastScroller : LinearLayout {
                     recyclerViewId,
                     ConstraintSet.BOTTOM
                 )
-                constraintSet.connect(
-                    layoutId,
-                    ConstraintSet.END,
-                    recyclerViewId,
-                    ConstraintSet.END
-                )
+                if (alignToLeft) {
+                    constraintSet.connect(
+                        layoutId,
+                        ConstraintSet.LEFT,
+                        recyclerViewId,
+                        ConstraintSet.LEFT
+                    )
+                } else {
+                    constraintSet.connect(
+                        layoutId,
+                        ConstraintSet.RIGHT,
+                        recyclerViewId,
+                        ConstraintSet.RIGHT
+                    )
+                }
                 constraintSet.applyTo(viewGroup)
                 val layoutParams = layoutParams as ConstraintLayout.LayoutParams
                 layoutParams.setMargins(0, marginTop, 0, marginBottom)
@@ -144,22 +154,24 @@ class FastScroller : LinearLayout {
             is CoordinatorLayout -> {
                 val layoutParams = layoutParams as CoordinatorLayout.LayoutParams
                 layoutParams.anchorId = recyclerViewId
-                layoutParams.anchorGravity = GravityCompat.END
+                layoutParams.anchorGravity = if (alignToLeft) Gravity.LEFT else Gravity.RIGHT
                 layoutParams.setMargins(0, marginTop, 0, marginBottom)
                 setLayoutParams(layoutParams)
             }
             is FrameLayout -> {
                 val layoutParams = layoutParams as FrameLayout.LayoutParams
-                layoutParams.gravity = GravityCompat.END or Gravity.TOP
+                layoutParams.gravity = (if (alignToLeft) Gravity.LEFT else Gravity.RIGHT) or Gravity.TOP
                 layoutParams.setMargins(0, marginTop, 0, marginBottom)
                 setLayoutParams(layoutParams)
             }
             is RelativeLayout -> {
                 val layoutParams = layoutParams as RelativeLayout.LayoutParams
-                val endRule = RelativeLayout.ALIGN_END
                 layoutParams.addRule(RelativeLayout.ALIGN_TOP, recyclerViewId)
                 layoutParams.addRule(RelativeLayout.ALIGN_BOTTOM, recyclerViewId)
-                layoutParams.addRule(endRule, recyclerViewId)
+                layoutParams.addRule(
+                    if (alignToLeft) RelativeLayout.ALIGN_LEFT else RelativeLayout.ALIGN_RIGHT,
+                    recyclerViewId
+                )
                 layoutParams.setMargins(0, marginTop, 0, marginBottom)
                 setLayoutParams(layoutParams)
             }
@@ -417,6 +429,15 @@ class FastScroller : LinearLayout {
         return view != null && view.visibility == View.VISIBLE
     }
 
+    private fun shouldAlignToLeft(): Boolean {
+        val recyclerView = mRecyclerView ?: return false
+        return when (recyclerView.verticalScrollbarPosition) {
+            View.SCROLLBAR_POSITION_LEFT -> true
+            View.SCROLLBAR_POSITION_RIGHT -> false
+            else -> ViewCompat.getLayoutDirection(recyclerView) == ViewCompat.LAYOUT_DIRECTION_RTL
+        }
+    }
+
     private fun cancelAnimation(animator: ViewPropertyAnimator?) {
         animator?.cancel()
     }
@@ -456,9 +477,7 @@ class FastScroller : LinearLayout {
     private fun showScrollbar() {
         mRecyclerView?.let { mRecyclerView ->
             if (mRecyclerView.computeVerticalScrollRange() - mViewHeight > 0) {
-                val transX =
-                    resources.getDimensionPixelSize(R.dimen.fastscroll_scrollbar_padding_end)
-                        .toFloat()
+                val transX = getScrollbarTranslationOffset()
                 mScrollbar.translationX = transX
                 mScrollbar.visibility = View.VISIBLE
                 mScrollbarAnimator = mScrollbar.animate().translationX(0f).alpha(1f)
@@ -472,8 +491,7 @@ class FastScroller : LinearLayout {
     }
 
     private fun hideScrollbar() {
-        val transX =
-            resources.getDimensionPixelSize(R.dimen.fastscroll_scrollbar_padding_end).toFloat()
+        val transX = getScrollbarTranslationOffset()
         mScrollbarAnimator = mScrollbar.animate().translationX(transX).alpha(0f)
             .setDuration(sScrollbarAnimDuration.toLong())
             .setListener(object : AnimatorListenerAdapter() {
@@ -489,6 +507,11 @@ class FastScroller : LinearLayout {
                     mScrollbarAnimator = null
                 }
             })
+    }
+
+    private fun getScrollbarTranslationOffset(): Float {
+        val offset = resources.getDimensionPixelSize(R.dimen.fastscroll_scrollbar_padding_end).toFloat()
+        return if (alignToLeft) -offset else offset
     }
 
     private fun setHandleSelected(selected: Boolean) {
