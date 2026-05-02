@@ -181,8 +181,13 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
     }
 
     private fun upFastScrollerBar() {
-        binding.rvBookshelf.scrollBarSize =
-            ViewConfiguration.get(requireContext()).scaledScrollBarSize
+        val showFastScroller = AppConfig.showBookshelfFastScroller
+        binding.rvBookshelf.setFastScrollEnabled(showFastScroller)
+        binding.rvBookshelf.isVerticalScrollBarEnabled = !showFastScroller
+        if (!showFastScroller) {
+            binding.rvBookshelf.scrollBarSize =
+                ViewConfiguration.get(requireContext()).scaledScrollBarSize
+        }
     }
 
     fun upBookSort(sort: Int) {

@@ -28,6 +28,7 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.databinding.ActivityBookSourceBinding
 import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.DirectLinkUpload
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryColor
@@ -281,6 +282,9 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.addItemDecoration(VerticalDivider(this))
         binding.recyclerView.adapter = adapter
+        val showFastScroller = AppConfig.showBookshelfFastScroller
+        binding.recyclerView.setFastScrollEnabled(showFastScroller)
+        binding.recyclerView.isVerticalScrollBarEnabled = !showFastScroller
         binding.recyclerView.recycledViewPool.setMaxRecycledViews(0, 15)
         // When this page is opened, it is in selection mode
         val dragSelectTouchHelper =

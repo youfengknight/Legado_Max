@@ -136,8 +136,13 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
     }
 
     private fun upFastScrollerBar() {
-        binding.rvBookshelf.scrollBarSize =
-            ViewConfiguration.get(requireContext()).scaledScrollBarSize
+        val showFastScroller = AppConfig.showBookshelfFastScroller
+        binding.rvBookshelf.setFastScrollEnabled(showFastScroller)
+        binding.rvBookshelf.isVerticalScrollBarEnabled = !showFastScroller
+        if (!showFastScroller) {
+            binding.rvBookshelf.scrollBarSize =
+                ViewConfiguration.get(requireContext()).scaledScrollBarSize
+        }
     }
 
     override fun upGroup(data: List<BookGroup>) {

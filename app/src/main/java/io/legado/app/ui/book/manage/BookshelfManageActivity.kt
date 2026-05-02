@@ -181,6 +181,9 @@ class BookshelfManageActivity :
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.addItemDecoration(VerticalDivider(this))
         binding.recyclerView.adapter = adapter
+        val showFastScroller = AppConfig.showBookshelfFastScroller
+        binding.recyclerView.setFastScrollEnabled(showFastScroller)
+        binding.recyclerView.isVerticalScrollBarEnabled = !showFastScroller
         itemTouchCallback.isCanDrag = AppConfig.bookshelfSort == 3
         val dragSelectTouchHelper: DragSelectTouchHelper =
             DragSelectTouchHelper(adapter.dragSelectCallback).setSlideArea(16, 50)
