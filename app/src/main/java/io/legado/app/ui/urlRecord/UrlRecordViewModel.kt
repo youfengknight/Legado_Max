@@ -4,10 +4,10 @@ import android.app.Application
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.constant.PreferKey
 import io.legado.app.utils.putPrefBoolean
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +23,7 @@ class UrlRecordViewModel(application: Application) : BaseViewModel(application) 
 
     val recordCount = MutableStateFlow(0)
 
-    private var observeJob: Job? = null
+    private var observeJob: Coroutine<*>? = null
 
     init {
         observeRecords()
