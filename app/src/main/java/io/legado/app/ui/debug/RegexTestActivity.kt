@@ -1,5 +1,7 @@
 package io.legado.app.ui.debug
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -35,6 +37,21 @@ import androidx.compose.material3.lightColorScheme
 
 class RegexTestActivity : AppCompatActivity() {
 
+    companion object {
+        fun startIntent(
+            context: Context,
+            pattern: String = "",
+            replacement: String = "",
+            isRegex: Boolean = true
+        ): Intent {
+            return Intent(context, RegexTestActivity::class.java).apply {
+                putExtra("pattern", pattern)
+                putExtra("replacement", replacement)
+                putExtra("isRegex", isRegex)
+            }
+        }
+    }
+
     private var bgDrawable: Drawable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,10 +61,17 @@ class RegexTestActivity : AppCompatActivity() {
         loadBackgroundImage()
         enableEdgeToEdge()
         
+        val pattern = intent.getStringExtra("pattern") ?: ""
+        val replacement = intent.getStringExtra("replacement") ?: ""
+        val isRegex = intent.getBooleanExtra("isRegex", true)
+        
         setContent {
             RegexTestContent(
                 bgDrawable = bgDrawable,
-                onBackClick = { finish() }
+                onBackClick = { finish() },
+                initialPattern = pattern,
+                initialReplacement = replacement,
+                initialIsRegex = isRegex
             )
         }
     }
@@ -107,7 +131,10 @@ class RegexTestActivity : AppCompatActivity() {
 @Composable
 fun RegexTestContent(
     bgDrawable: Drawable?,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    initialPattern: String = "",
+    initialReplacement: String = "",
+    initialIsRegex: Boolean = true
 ) {
     val context = LocalContext.current
 
@@ -207,7 +234,12 @@ fun RegexTestContent(
             bgDrawable = bgDrawable,
             bgColor = background
         ) {
-            RegexTestScreen(onBackClick = onBackClick)
+            RegexTestScreen(
+                onBackClick = onBackClick,
+                initialPattern = initialPattern,
+                initialReplacement = initialReplacement,
+                initialIsRegex = initialIsRegex
+            )
         }
     }
 }

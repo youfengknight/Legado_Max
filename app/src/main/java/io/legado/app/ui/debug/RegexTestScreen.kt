@@ -75,20 +75,23 @@ private data class TestResult(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegexTestScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    initialPattern: String = "",
+    initialReplacement: String = "",
+    initialIsRegex: Boolean = true
 ) {
     val context = LocalContext.current
     val containerColor = debugToolsCardContainerColor()
     val topBarColor = debugToolsTopBarContainerColor()
     
-    var pattern by remember { mutableStateOf("") }
+    var pattern by remember { mutableStateOf(initialPattern) }
     var input by remember { mutableStateOf("") }
-    var replacement by remember { mutableStateOf("") }
+    var replacement by remember { mutableStateOf(initialReplacement) }
     
     var ignoreCase by remember { mutableStateOf(false) }
     var multiline by remember { mutableStateOf(false) }
     var dotAll by remember { mutableStateOf(false) }
-    var useRegex by remember { mutableStateOf(true) }
+    var useRegex by remember { mutableStateOf(initialIsRegex) }
     var realtimePreview by remember { mutableStateOf(true) }
     
     var testResult by remember { mutableStateOf<TestResult?>(null) }

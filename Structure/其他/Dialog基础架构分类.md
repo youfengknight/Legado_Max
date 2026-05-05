@@ -106,7 +106,7 @@
 - PhotoDialog - 图片查看
 - CookieViewerDialog - Cookie 查看器
 - UrlOptionDialog - URL 选项
-- RegexTestDialog - 正则测试
+- RegexTestDialog - ~~正则测试~~ (已迁移至 RegexTestActivity - Compose)
 - VerificationCodeDialog - 验证码
 - OpenUrlConfirmDialog - URL 确认
 - BackupInfoDialog - 备份信息
