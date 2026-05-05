@@ -24,6 +24,12 @@ package io.legado.app.ui.debug
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -34,6 +40,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -42,6 +51,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.legado.app.BuildConfig
@@ -259,6 +269,14 @@ fun HttpDebugScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(scrollState)
+                        )
+                        
+                        // 可拖动的垂直滚动条
+                        VerticalDraggableScrollbar(
+                            scrollState = scrollState,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(horizontal = 2.dp)
                         )
                     }
                     
@@ -834,4 +852,93 @@ private fun buildRequestSrc(
         sb.append(bodyText)
     }
     return sb.toString()
+}
+
+/**
+ * 可拖动的垂直滚动条组件
+ * 
+ * @param scrollState 滚动状态
+ * @param modifier 修饰符
+ * @param scrollbarWidth 滚动条宽度
+ * @param minScrollbarHeight 滚动条最小高度
+ * @param scrollbarColor 滚动条颜色
+ */
+@Composable
+private fun VerticalDraggableScrollbar(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier,
+    scrollbarWidth: Dp = 6.dp,
+    minScrollbarHeight: Dp = 32.dp,
+    scrollbarColor: Color = Color.Gray.copy(alpha = 0.6f)
+) {
+    if (scrollState.maxValue == 0) return
+    
+    // 计算滚动条位置
+    val scrollProgress = scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+    
+    Box(
+        modifier = modifier
+            .width(scrollbarWidth)
+            .fillMaxHeight()
+            .draggable(
+                orientation = Orientation.Vertical,
+                state = rememberDraggableState { delta ->
+                    // 将拖动转换为滚动
+                    val scrollAmount = (delta / scrollState.viewportSize) * scrollState.maxValue
+                    val newScrollValue = (scrollState.value + scrollAmount).toInt()
+                        .coerceIn(0, scrollState.maxValue)
+                    scrollState.dispatchRawDelta(newScrollValue - scrollState.value.toFloat())
+                }
+            )
+    ) {
+        Box(
+            modifier = Modifier
+                .width(scrollbarWidth)
+                .height(minScrollbarHeight)
+                .offset(y = (scrollProgress * (scrollState.viewportSize - minScrollbarHeight.value)).toInt().dp)
+                .background(scrollbarColor, RoundedCornerShape(3.dp))
+        )
+    }
+}
+
+/**
+ * 绘制垂直滚动条的 Modifier（已弃用，使用 VerticalDraggableScrollbar 替代）
+ * 
+ * @param scrollState 滚动状态
+ * @param scrollbarWidth 滚动条宽度
+ * @param scrollbarColor 滚动条颜色
+ * @param scrollbarCornerRadius 滚动条圆角半径
+ */
+@Deprecated("Use VerticalDraggableScrollbar instead", ReplaceWith("VerticalDraggableScrollbar(scrollState)"))
+private fun Modifier.drawVerticalScrollbar(
+    scrollState: ScrollState,
+    scrollbarWidth: Dp = 4.dp,
+    scrollbarColor: Color = Color.Gray.copy(alpha = 0.5f),
+    scrollbarCornerRadius: Dp = 2.dp
+): Modifier = this then Modifier.drawWithContent {
+    drawContent()
+    
+    val viewportHeight = size.height
+    val totalContentHeight = scrollState.maxValue + viewportHeight
+    
+    if (totalContentHeight > viewportHeight) {
+        val scrollbarWidthPx = scrollbarWidth.toPx()
+        val scrollbarHeight = maxOf(scrollbarWidthPx, (viewportHeight / totalContentHeight) * viewportHeight)
+        val scrollProgress = if (scrollState.maxValue > 0) {
+            scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+        } else {
+            0f
+        }
+        val scrollbarOffsetY = scrollProgress * (viewportHeight - scrollbarHeight)
+        
+        val scrollbarLeft = size.width - scrollbarWidthPx
+        val cornerRadiusPx = scrollbarCornerRadius.toPx()
+        
+        drawRoundRect(
+            color = scrollbarColor,
+            topLeft = Offset(scrollbarLeft, scrollbarOffsetY),
+            size = Size(scrollbarWidthPx, scrollbarHeight),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx, cornerRadiusPx)
+        )
+    }
 }
