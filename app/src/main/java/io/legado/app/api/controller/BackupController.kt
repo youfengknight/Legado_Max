@@ -314,10 +314,10 @@ object BackupController {
             BackupItemDef("bookSource.json", "书源", "网络小说书源") {
                 appDb.bookSourceDao.all.size
             },
-            BackupItemDef("rssSources.json", "RSS源", "RSS订阅源") {
+            BackupItemDef("rssSources.json", "订阅源", "订阅源") {
                 appDb.rssSourceDao.all.size
             },
-            BackupItemDef("rssStar.json", "RSS收藏", "RSS收藏内容") {
+            BackupItemDef("rssStar.json", "订阅收藏", "订阅收藏内容") {
                 appDb.rssStarDao.all.size
             },
             BackupItemDef("replaceRule.json", "替换规则", "正文替换净化规则") {
@@ -329,9 +329,9 @@ object BackupController {
             BackupItemDef("searchHistory.json", "搜索历史", "搜索关键词历史") {
                 appDb.searchKeywordDao.all.size
             },
-            BackupItemDef("sourceSub.json", "订阅源", "书源订阅地址") {
-                appDb.ruleSubDao.all.size
-            },
+            // BackupItemDef("sourceSub.json", "订阅源", "书源订阅地址") {
+            //     appDb.ruleSubDao.all.size
+            // },
             BackupItemDef("txtTocRule.json", "TXT目录规则", "本地TXT目录解析规则") {
                 appDb.txtTocRuleDao.all.size
             },
