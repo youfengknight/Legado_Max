@@ -6,13 +6,26 @@
     android:layout_height="wrap_content"
     android:padding="16dp">
 
+    <io.legado.app.ui.widget.image.CoverImageView
+        android:id="@+id/iv_cover"
+        android:layout_width="44dp"
+        android:layout_height="60dp"
+        android:contentDescription="@string/img_cover"
+        android:scaleType="centerCrop"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:src="@drawable/ic_book" />
+
     <TextView
         android:id="@+id/tv_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
         android:singleLine="true"
         android:textColor="@color/primaryText"
-        app:layout_constraintLeft_toLeftOf="parent"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintLeft_toRightOf="@+id/iv_cover"
         app:layout_constraintRight_toLeftOf="@+id/iv_download"
         app:layout_constraintTop_toTopOf="parent"
         tools:text="@string/name" />
@@ -21,9 +34,12 @@
         android:id="@+id/tv_author"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="2dp"
         android:singleLine="true"
-        android:textColor="@color/primaryText"
-        app:layout_constraintLeft_toLeftOf="parent"
+        android:textColor="@color/secondaryText"
+        android:textSize="14sp"
+        app:layout_constraintLeft_toRightOf="@+id/iv_cover"
         app:layout_constraintRight_toLeftOf="@+id/iv_download"
         app:layout_constraintTop_toBottomOf="@+id/tv_name"
         tools:text="@string/author" />
@@ -32,9 +48,12 @@
         android:id="@+id/tv_download"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="2dp"
         android:singleLine="true"
         android:textColor="@color/secondaryText"
-        app:layout_constraintLeft_toLeftOf="parent"
+        android:textSize="12sp"
+        app:layout_constraintLeft_toRightOf="@+id/iv_cover"
         app:layout_constraintRight_toLeftOf="@+id/iv_download"
         app:layout_constraintTop_toBottomOf="@id/tv_author"
         tools:text="@string/action_download" />

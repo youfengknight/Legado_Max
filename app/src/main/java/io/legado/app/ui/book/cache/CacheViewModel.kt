@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.coroutine.Coroutine
@@ -18,6 +19,7 @@ class CacheViewModel(application: Application) : BaseViewModel(application) {
 
     private var loadChapterCoroutine: Coroutine<Unit>? = null
     val cacheChapters = hashMapOf<String, HashSet<String>>()
+    private val bookRepository = BookRepository()
 
     fun loadCacheFiles(books: List<Book>) {
         loadChapterCoroutine?.cancel()
@@ -41,6 +43,10 @@ class CacheViewModel(application: Application) : BaseViewModel(application) {
                 ensureActive()
             }
         }
+    }
+
+    suspend fun getBookCover(bookName: String, bookAuthor: String): String? {
+        return bookRepository.getBookCoverByNameAndAuthor(bookName, bookAuthor)
     }
 
 }

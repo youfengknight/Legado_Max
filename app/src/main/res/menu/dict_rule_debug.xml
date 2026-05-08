@@ -12,4 +12,9 @@
         android:title="结果源码"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/menu_help"
+        android:title="@string/help"
+        app:showAsAction="never" />
+
 </menu>

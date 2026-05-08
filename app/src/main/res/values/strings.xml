@@ -922,6 +922,10 @@
     <string name="toc_src">Chapters source code</string>
     <string name="content_src">Content source code</string>
     <string name="list_src">List source code</string>
+    <string name="play_audio">播放音频</string>
+    <string name="view_js_lib">查看jsLib</string>
+    <string name="view_result">查看结果</string>
+    <string name="open_editor">在编辑器中打开</string>
     <string name="title_font_size">Font size</string>
     <string name="title_margin_top">Margin top</string>
     <string name="title_margin_bottom">Margin bottom</string>

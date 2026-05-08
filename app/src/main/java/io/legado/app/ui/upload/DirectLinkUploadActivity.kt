@@ -23,7 +23,6 @@ import androidx.core.graphics.drawable.toBitmap
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.ColorUtils
-import io.legado.app.utils.setLightStatusBar
 import io.legado.app.utils.fullScreen
 import io.legado.app.utils.setNavigationBarColorAuto
 import io.legado.app.utils.setStatusBarColorAuto
@@ -71,7 +70,6 @@ class DirectLinkUploadActivity : AppCompatActivity() {
     }
 
     private fun initTheme() {
-        ThemeConfig.applyTheme(this)
         val theme = ThemeConfig.getTheme()
         when (theme) {
             io.legado.app.constant.Theme.Dark -> {
@@ -95,10 +93,6 @@ class DirectLinkUploadActivity : AppCompatActivity() {
         val isTransparentStatusBar = AppConfig.isTransparentStatusBar
         val statusBarColor = ThemeStore.statusBarColor(this, isTransparentStatusBar)
         setStatusBarColorAuto(statusBarColor, isTransparentStatusBar, true)
-        val bgColor = ThemeStore.backgroundColor(this)
-        val isNightTheme = AppConfig.isNightTheme
-        val isLight = !isNightTheme && ColorUtils.isColorLight(bgColor)
-        setLightStatusBar(isLight)
         if (AppConfig.immNavigationBar) {
             setNavigationBarColorAuto(ThemeStore.navigationBarColor(this))
         } else {
@@ -124,8 +118,8 @@ fun DirectLinkUploadContent(
 
     val isLight = !isNightTheme && ColorUtils.isColorLight(bgColor)
     val background = Color(bgColor)
-    val primary = Color(accentColor)  // 使用强调色作为主色调
-    val secondary = Color(primaryColorValue)  // 使用主色调作为次要颜色
+    val primary = Color(accentColor)
+    val secondary = Color(primaryColorValue)
     val onBackground = Color(textPrimaryColor)
     val onBackgroundVariant = Color(textSecondaryColor)
     
@@ -194,6 +188,7 @@ fun DirectLinkUploadBoxWithBackground(
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (bgDrawable != null) {
+            val overlayAlpha = if (bgColor.luminance() > 0.5f) 0.22f else 0.40f
             Image(
                 bitmap = bgDrawable.toBitmap().asImageBitmap(),
                 contentDescription = null,
@@ -203,7 +198,7 @@ fun DirectLinkUploadBoxWithBackground(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(bgColor)
+                    .background(bgColor.copy(alpha = overlayAlpha))
             )
         } else {
             Box(

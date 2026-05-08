@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 // 协程和ViewModel
 import androidx.compose.runtime.rememberCoroutineScope
@@ -148,6 +149,7 @@ fun UrlRecordScreen(
     // Scaffold 是Material3的基础页面模板
     // 它提供了topBar、bottomBar、floatingActionButton等预定义区域
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             // ==================== 标题栏 ====================
             TopAppBar(
@@ -163,8 +165,7 @@ fun UrlRecordScreen(
                     Column {
                         Text(
                             text = "URL访问记录",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium)
                         )
                         // 条件显示：只有recordCount > 0时才显示
                         if (recordCount > 0) {

@@ -125,7 +125,11 @@ class DictRuleEditDialog() : BaseDialogFragment(R.layout.dialog_dict_rule_edit, 
     }
 
     private fun showDebugDialog(dictRule: DictRule) {
-        showDialogFragment(DictRuleDebugDialog(dictRule))
+        startActivity<DictRuleDebugActivity> {
+            putExtra("name", dictRule.name)
+            putExtra("urlRule", dictRule.urlRule)
+            putExtra("showRule", dictRule.showRule)
+        }
     }
 
     private fun upRuleView(dictRule: DictRule?) {

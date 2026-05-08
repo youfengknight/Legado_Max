@@ -44,6 +44,7 @@ class CacheAdapter(context: Context, private val callBack: CallBack) :
     ) {
         binding.run {
             if (payloads.isEmpty()) {
+                ivCover.load(item, false)
                 tvName.text = item.name
                 tvAuthor.text = context.getString(R.string.author_show, item.getRealAuthor())
                 if (item.isLocal) {

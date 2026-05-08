@@ -381,6 +381,10 @@
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true" />
         <activity
+            android:name=".ui.dict.rule.DictRuleDebugActivity"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
+        <activity
             android:name=".ui.debug.TimestampConvertActivity"
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true" />

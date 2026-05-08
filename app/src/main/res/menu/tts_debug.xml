@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="AlwaysShowAction">
+
+    <item
+        android:id="@+id/menu_play_audio"
+        android:icon="@drawable/ic_play_24dp"
+        android:title="@string/play_audio"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_view_js_lib"
+        android:title="@string/view_js_lib"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_view_result"
+        android:title="@string/view_result"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_open_editor"
+        android:title="@string/open_editor"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_help"
+        android:title="@string/help"
+        app:showAsAction="never" />
+
+</menu>

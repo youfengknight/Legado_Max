@@ -9,10 +9,16 @@ jobs:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     outputs:
       version: ${{ steps.set-ver.outputs.version }}
+      gitee: ${{ steps.check.outputs.gitee }}
     steps:
       - id: set-ver
         run: |
           echo "version=$(date -d "8 hour" -u +3.%y.%m%d%H)" >> $GITHUB_OUTPUT
+      - id: check
+        run: |
+          if [ -n "${{ secrets.GITEE_TOKEN }}" ]; then
+            echo "gitee=yes" >> $GITHUB_OUTPUT
+          fi
 
   build:
     needs: prepare
@@ -69,7 +75,7 @@ jobs:
       - name: 列出下载的文件（调试用）
         run: ls -la all_apks/
 
-      - name: 发布到 Release
+      - name: 发布到 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: 阅读双包版 ${{ needs.prepare.outputs.version }}
@@ -85,3 +91,64 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  gitee:
+    needs: [prepare, build]
+    if: github.event_name != 'pull_request' && needs.prepare.outputs.gitee == 'yes'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载所有 APK
+        uses: actions/download-artifact@v7
+        with:
+          pattern: '*_apk'
+          path: all_apks
+          merge-multiple: true
+
+      - name: 发布到 Gitee Release
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_USER: "GEd520"
+          GITEE_REPO: "legados"
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq curl
+          API_BASE="https://gitee.com/api/v5/repos/$GITEE_USER/$GITEE_REPO"
+          AUTH_HEADER="Authorization: token $GITEE_TOKEN"
+          
+          TAG_NAME="$VERSION"
+          RELEASE_NAME="阅读双包版 $VERSION"
+          BODY="## 自动打包：两个版本共存\n\n- 📱 阅读A·Max\n- 📱 阅读·Max\n\n两个版本可以同时安装，互不冲突。"
+          
+          if release_data=$(curl -sH "$AUTH_HEADER" "$API_BASE/releases/tags/$TAG_NAME"); then
+            release_id=$(echo "$release_data" | jq -r '.id // empty')
+            if [ -n "$release_id" ]; then
+              curl -sX DELETE -H "$AUTH_HEADER" "$API_BASE/releases/$release_id"
+              echo "✅ 已删除旧 release"
+            fi
+          fi
+          
+          RELEASE_JSON=$(curl -sS -X POST \
+              -H "Content-Type: application/json" \
+              -H "$AUTH_HEADER" \
+              -d '{
+                "tag_name": "'"$TAG_NAME"'",
+                "name": "'"$RELEASE_NAME"'",
+                "body": "'"$BODY"'",
+                "target_commitish": "main",
+                "prerelease": false
+              }' \
+              "$API_BASE/releases")
+          
+          RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id // empty')
+          if [ -z "$RELEASE_ID" ]; then
+            echo "❌ 创建Release失败"
+            exit 1
+          fi
+          
+          for APK_FILE in all_apks/*.apk; do
+            curl -sS -X POST \
+              -H "$AUTH_HEADER" \
+              -F "file=@$APK_FILE" \
+              "$API_BASE/releases/$RELEASE_ID/attach_files"
+            echo "✅ 已上传 $APK_FILE"
+          done

@@ -18,45 +18,62 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <io.legado.app.ui.widget.image.CoverImageView
+        android:id="@+id/iv_cover"
+        android:layout_width="44dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/img_cover"
+        android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toRightOf="@id/checkbox"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:src="@drawable/ic_book" />
+
     <TextView
         android:id="@+id/tv_name"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
         android:padding="3dp"
         android:singleLine="true"
         android:text="@string/book_name"
         android:textColor="@color/primaryText"
         android:textSize="15sp"
-        app:layout_constraintBottom_toTopOf="@id/tv_group_s"
-        app:layout_constraintLeft_toRightOf="@id/checkbox"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@id/tv_author"
+        app:layout_constraintLeft_toRightOf="@id/iv_cover"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_chainStyle="packed" />
 
     <TextView
         android:id="@+id/tv_author"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:paddingLeft="12dp"
-        android:paddingRight="8dp"
+        android:layout_marginStart="12dp"
+        android:padding="3dp"
         android:singleLine="true"
         android:text="@string/author"
         android:textColor="@color/tv_text_summary"
         android:textSize="12sp"
-        app:layout_constraintBottom_toBottomOf="@+id/tv_name"
-        app:layout_constraintLeft_toRightOf="@+id/tv_name"
+        app:layout_constraintBottom_toTopOf="@id/tv_origin"
+        app:layout_constraintLeft_toRightOf="@id/iv_cover"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/tv_name"
+        app:layout_constraintTop_toBottomOf="@id/tv_name"
         tools:ignore="RtlHardcoded" />
 
     <TextView
         android:id="@+id/tv_origin"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginStart="12dp"
         android:padding="3dp"
         android:textColor="@color/tv_text_summary"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toRightOf="@+id/checkbox"
+        app:layout_constraintLeft_toRightOf="@id/iv_cover"
+        app:layout_constraintRight_toLeftOf="@id/tv_group_s"
         app:layout_constraintTop_toBottomOf="@id/tv_author"
         tools:text="书源" />
 
@@ -64,7 +81,6 @@
         android:id="@+id/tv_group_s"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
         android:hint="@string/no_group"
         android:padding="3dp"
         android:singleLine="true"

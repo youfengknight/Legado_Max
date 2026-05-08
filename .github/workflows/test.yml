@@ -415,8 +415,8 @@ jobs:
         continue-on-error: true
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          GITEE_USER: "lyc486"
-          GITEE_REPO: "legado"
+          GITEE_USER: "GEd520"
+          GITEE_REPO: "legados"
           VERSION: ${{ needs.prepare.outputs.version }}
           UPDATE_CONTENT: ${{ fromJSON(needs.prepare.outputs.updateLog_content) }}
           UPDATE_UPDATED: ${{ needs.prepare.outputs.updateLog_updated }}
