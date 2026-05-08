@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 // 协程和ViewModel
 import androidx.compose.runtime.rememberCoroutineScope
@@ -163,10 +164,9 @@ fun UrlRecordScreen(
                     // Column 是垂直布局，子元素从上到下排列
                     Column {
                         Text(
-                text = "URL访问记录",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
+                            text = "URL访问记录",
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                        )
                         // 条件显示：只有recordCount > 0时才显示
                         if (recordCount > 0) {
                             Text(
