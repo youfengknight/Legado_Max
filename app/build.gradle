@@ -138,18 +138,7 @@ android {
     }
     android.applicationVariants.configureEach { variant ->
         variant.outputs.configureEach { output ->
-            def flavorName = variant.productFlavors[0].name
-            def apkSuffix = ""
-            
-            if (flavorName == "appS") {
-                apkSuffix = "_releaseS"
-            } else if (flavorName == "appLegacy") {
-                apkSuffix = ""  // 正式版不需要后缀
-            } else if (flavorName == "appMax") {
-                apkSuffix = "_releaseA"
-            }
-            
-            outputFileName = "${name}_app${apkSuffix}_${defaultConfig.versionName}.apk"
+            outputFileName = "${name}_${defaultConfig.versionName}.apk"
         }
     }
 
