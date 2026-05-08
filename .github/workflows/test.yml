@@ -183,13 +183,13 @@ jobs:
         continue-on-error: true
         run: |
           if [ "${{ env.type }}" == 'release' ]; then
-            typeName="release"
+            typeName="原包名"
             gradleTask="assembleAppMaxRelease"
           elif [ "${{ env.type }}" == 'releaseS' ]; then
-            typeName="releaseS"
+            typeName="共存"
             gradleTask="assembleAppSRelease"
           else
-            typeName="legacy"
+            typeName="旧版覆盖"
             gradleTask="assembleAppLegacyRelease"
           fi
           echo "统一版本号"
@@ -432,10 +432,29 @@ jobs:
             RELEASE_NAME="legado_app_$VERSION"
             echo "🚀 发布正式版: $TAG_NAME"
           else
-            TAG_NAME="beta-$VERSION"
+            TAG_NAME="beta"
             PRERELEASE="true"
             RELEASE_NAME="legado_app_$VERSION"
             echo "🧪 发布预发布版: $TAG_NAME"
+          fi
+
+          # 删除旧Release
+          if [ "$TAG_NAME" = "beta" ]; then
+            if release_data=$(curl -sH "$AUTH_HEADER" "$API_BASE/releases/tags/beta"); then
+              release_id=$(echo "$release_data" | jq -r '.id // empty')
+              if [ -n "$release_id" ]; then
+                curl -sX DELETE -H "$AUTH_HEADER" "$API_BASE/releases/$release_id"
+                echo "✅ 已删除旧 beta release"
+              fi
+            fi
+          else
+            if release_data=$(curl -sH "$AUTH_HEADER" "$API_BASE/releases/tags/$TAG_NAME"); then
+              release_id=$(echo "$release_data" | jq -r '.id // empty')
+              if [ -n "$release_id" ]; then
+                curl -sX DELETE -H "$AUTH_HEADER" "$API_BASE/releases/$release_id"
+                echo "✅ 已删除旧 $TAG_NAME release"
+              fi
+            fi
           fi
 
           # 创建新Release，带重试机制
@@ -473,25 +492,22 @@ jobs:
             exit 1
           fi
 
-          # 并行上传所有APK文件
+          # 上传所有APK文件
           for APK_FILE in apk/*.apk; do
-            (
-              set +e
-              curl -sS --fail --tlsv1.2 --retry 2 --retry-delay 3 --connect-timeout 30 --max-time 6000 -X POST \
-                -H "$AUTH_HEADER" \
-                -F "file=@$APK_FILE" \
-                "$API_BASE/releases/$RELEASE_ID/attach_files"
-              CURL_EXIT=$?
-              set -e
-              if [ $CURL_EXIT -eq 0 ]; then
-                echo "✅ 已上传 $APK_FILE"
-              else
-                echo "❌ 上传 $APK_FILE 失败 (curl exit $CURL_EXIT)"
-              fi
-            ) &
+            set +e
+            curl -sS --fail --tlsv1.2 --retry 2 --retry-delay 3 --connect-timeout 30 --max-time 6000 -X POST \
+              -H "$AUTH_HEADER" \
+              -F "file=@$APK_FILE" \
+              "$API_BASE/releases/$RELEASE_ID/attach_files"
+            CURL_EXIT=$?
+            set -e
+            if [ $CURL_EXIT -eq 0 ]; then
+              echo "✅ 已上传 $APK_FILE"
+            else
+              echo "❌ 上传 $APK_FILE 失败 (curl exit $CURL_EXIT)"
+              sleep 10
+            fi
           done
-          wait
-          echo "✅ 所有文件上传完成"
 
   update-storage:
     needs: [prepare, build]
