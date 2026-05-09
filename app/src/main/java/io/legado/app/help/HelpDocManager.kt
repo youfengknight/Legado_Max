@@ -16,9 +16,10 @@ object HelpDocManager {
         HelpDoc("debugHelp", "书源调试说明"),
         HelpDoc("替换规则流程与机制", "替换规则流程与机制"),
         HelpDoc("ExtensionContentType", "扩展内容类型")
+        HelpDoc("部分功能需要安卓特定版本", "部分功能需要安卓特定版本"),
     )
     
-    // 隐藏的帮助文档（可以加载查看，但不会出现在切换列表中）
+    // 隐藏的帮助文档（可以在某些界面加载查看，但不会出现在切换列表中）
     private val hiddenHelpDocs = listOf(
         HelpDoc("SourceMBookHelp", "书源管理界面帮助"),
         HelpDoc("SourceMRssHelp", "订阅源管理界面帮助"),
