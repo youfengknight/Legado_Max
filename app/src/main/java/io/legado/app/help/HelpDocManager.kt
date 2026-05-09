@@ -14,6 +14,7 @@ object HelpDocManager {
         HelpDoc("dictRuleHelp", "字典规则说明"),
         HelpDoc("httpTTSHelp", "在线朗读规则"),
         HelpDoc("debugHelp", "书源调试说明"),
+        HelpDoc("替换规则流程与机制", "替换规则流程与机制"),
         HelpDoc("ExtensionContentType", "扩展内容类型")
     )
     
