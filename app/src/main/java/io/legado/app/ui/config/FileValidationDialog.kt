@@ -3,7 +3,7 @@ package io.legado.app.ui.config
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
@@ -15,7 +15,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -33,7 +37,7 @@ fun FileValidationDialog(
     onDismiss: () -> Unit,
     onInfoClick: (ValidationResult) -> Unit
 ) {
-    val checkedStates = remember { mutableStateMapOf<Int, Boolean>().apply { files.indices.forEach { put(it, true) } } }
+    val checkedStates = remember { mutableStateMapOf<String, Boolean>().apply { files.forEach { put(it.fileName, true) } } }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -81,13 +85,13 @@ fun FileValidationDialog(
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    itemsIndexed(files) { index, file ->
+                    items(files, key = { it.fileName }) { file ->
                         val result = validationResults[file.fileName]
                         FileValidationItem(
                             file = file,
-                            isChecked = checkedStates[index] ?: true,
+                            isChecked = checkedStates[file.fileName] ?: true,
                             result = result,
-                            onCheckedChange = { checked -> checkedStates[index] = checked },
+                            onCheckedChange = { checked -> checkedStates[file.fileName] = checked },
                             onInfoClick = { result?.let { onInfoClick(it) } }
                         )
                     }
@@ -106,9 +110,7 @@ fun FileValidationDialog(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = {
-                        val selectedFiles = files.filterIndexed { index, _ ->
-                            checkedStates[index] == true
-                        }.map { it.fileName }
+                        val selectedFiles = files.filter { checkedStates[it.fileName] == true }.map { it.fileName }
                         onConfirm(selectedFiles)
                     }) {
                         Text("确定")
@@ -203,13 +205,26 @@ fun ValidationErrorDetailDialog(
         else -> Icons.Default.Help
     }
 
-    val message = buildString {
+    val message = buildAnnotatedString {
         append(result.message)
         if (result.details.isNotBlank()) {
             append("\n\n${result.details}")
         }
         if (result.missingFields.isNotEmpty()) {
             append("\n\n缺少字段: ${result.missingFields.joinToString(", ")}")
+        }
+        append("\n\n")
+        withStyle(SpanStyle(color = androidx.compose.ui.graphics.Color.Unspecified)) {
+            if (result.canRestore) {
+                append("✅ ")
+            } else {
+                append("❌ ")
+            }
+        }
+        if (result.canRestore) {
+            append("可以正常恢复")
+        } else {
+            append("无法恢复")
         }
     }
 

@@ -42,7 +42,10 @@ data class ValidationResult(
     val details: String = "",
     val missingFields: List<String> = emptyList(),
     val exception: Throwable? = null
-)
+) {
+    val canRestore: Boolean
+        get() = state == ValidationState.VALID || state == ValidationState.WARNING
+}
 
 object BackupFileValidator {
     
