@@ -47,6 +47,7 @@ import io.legado.app.lib.prefs.fragment.PreferenceFragment
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.file.HandleFileContract
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.dialog.BackupInfoDialog
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.FileDoc
@@ -530,58 +531,60 @@ class BackupConfigFragment : PreferenceFragment(),
         val composeView = ComposeView(activity).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                if (showDialog) {
-                    FileValidationDialog(
-                        files = files,
-                        validationResults = results,
-                        onValidate = {
-                            validationJob?.cancel()
-                            validationJob = lifecycleScope.launch {
-                                try {
-                                    BackupFileValidator.validateFiles(backupPath, files.map { it.fileName }) { fileName, result ->
-                                        results[fileName] = result
-                                        validationResults[fileName] = result
+                LegadoTheme {
+                    if (showDialog) {
+                        FileValidationDialog(
+                            files = files,
+                            validationResults = results,
+                            onValidate = {
+                                validationJob?.cancel()
+                                validationJob = lifecycleScope.launch {
+                                    try {
+                                        BackupFileValidator.validateFiles(backupPath, files.map { it.fileName }) { fileName, result ->
+                                            results[fileName] = result
+                                            validationResults[fileName] = result
+                                        }
+                                    } catch (e: Exception) {
+                                        appCtx.toastOnUi("格式检测出错: ${e.message}")
                                     }
-                                } catch (e: Exception) {
-                                    appCtx.toastOnUi("格式检测出错: ${e.message}")
                                 }
+                            },
+                            onConfirm = { selectedFiles ->
+                                if (selectedFiles.isEmpty()) {
+                                    appCtx.toastOnUi("请至少选择一个文件")
+                                    return@FileValidationDialog
+                                }
+                                showDialog = false
+                                dismissComposeDialog()
+                                
+                                validationJob?.cancel()
+                                waitDialog.setText("恢复中…")
+                                waitDialog.show()
+                                val task = Coroutine.async {
+                                    Restore.restoreSelected(appCtx, backupPath, selectedFiles)
+                                }.onFinally {
+                                    waitDialog.dismiss()
+                                }
+                                waitDialog.setOnCancelListener {
+                                    task.cancel()
+                                }
+                            },
+                            onDismiss = {
+                                showDialog = false
+                                dismissComposeDialog()
+                                validationJob?.cancel()
+                            },
+                            onInfoClick = { result ->
+                                showErrorDialog = result
                             }
-                        },
-                        onConfirm = { selectedFiles ->
-                            if (selectedFiles.isEmpty()) {
-                                appCtx.toastOnUi("请至少选择一个文件")
-                                return@FileValidationDialog
-                            }
-                            showDialog = false
-                            dismissComposeDialog()
-                            
-                            validationJob?.cancel()
-                            waitDialog.setText("恢复中…")
-                            waitDialog.show()
-                            val task = Coroutine.async {
-                                Restore.restoreSelected(appCtx, backupPath, selectedFiles)
-                            }.onFinally {
-                                waitDialog.dismiss()
-                            }
-                            waitDialog.setOnCancelListener {
-                                task.cancel()
-                            }
-                        },
-                        onDismiss = {
-                            showDialog = false
-                            dismissComposeDialog()
-                            validationJob?.cancel()
-                        },
-                        onInfoClick = { result ->
-                            showErrorDialog = result
-                        }
-                    )
-                    
-                    showErrorDialog?.let { result ->
-                        ValidationErrorDetailDialog(
-                            result = result,
-                            onDismiss = { showErrorDialog = null }
                         )
+                        
+                        showErrorDialog?.let { result ->
+                            ValidationErrorDetailDialog(
+                                result = result,
+                                onDismiss = { showErrorDialog = null }
+                            )
+                        }
                     }
                 }
             }

@@ -43,7 +43,10 @@ fun FileValidationDialog(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .fillMaxHeight(0.8f),
-            shape = MaterialTheme.shapes.large
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
@@ -56,6 +59,7 @@ fun FileValidationDialog(
                         text = "选择要恢复的文件",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     FilledTonalButton(onClick = onValidate) {
@@ -69,7 +73,7 @@ fun FileValidationDialog(
                     }
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 LazyColumn(
                     modifier = Modifier
@@ -89,7 +93,7 @@ fun FileValidationDialog(
                     }
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 Row(
                     modifier = Modifier
@@ -98,7 +102,7 @@ fun FileValidationDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("取消")
+                        Text("取消", color = MaterialTheme.colorScheme.primary)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = {
@@ -132,12 +136,16 @@ private fun FileValidationItem(
     ) {
         Checkbox(
             checked = isChecked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         Text(
             text = "${file.displayName} (${BackupInfoHelper.formatSize(file.size)})",
             fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 8.dp)
@@ -207,6 +215,7 @@ fun ValidationErrorDetailDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
         icon = {
             Icon(
                 imageVector = icon,
@@ -225,7 +234,7 @@ fun ValidationErrorDetailDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("确定")
+                Text("确定", color = MaterialTheme.colorScheme.primary)
             }
         }
     )
