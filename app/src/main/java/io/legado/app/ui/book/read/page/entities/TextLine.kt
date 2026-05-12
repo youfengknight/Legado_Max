@@ -290,7 +290,6 @@ data class TextLine(
             3 -> drawWavyLine(canvas, paint, startX, lineY, endX, underlineWidth)
             4 -> drawDottedLine(canvas, paint, startX, lineY, endX, underlineWidth)
         }
-        }
         PaintPool.recycle(paint)
     }
 
