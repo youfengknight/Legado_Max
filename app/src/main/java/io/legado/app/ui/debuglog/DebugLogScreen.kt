@@ -54,6 +54,24 @@ import io.legado.app.ui.debuglog.viewmodel.DebugLogViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.legado.app.utils.share
 
+/**
+ * 调试日志主界面
+ *
+ * 显示应用运行过程中的各类调试日志，支持分类筛选、搜索、导出等功能。
+ * 主要包含以下分类：
+ * - 全部：显示所有日志
+ * - 应用：来自 AppLog 的一般性日志
+ * - 网络：来自 OkHttp 拦截器的网络访问记录
+ * - 书源：与书源相关的操作（包含子分类）
+ * - RSS：与 RSS 源相关的操作
+ * - Toast：应用内所有 Toast 消息记录
+ * - 校验：来自 CheckSource 的校验结果
+ * - 崩溃：来自 CrashHandler 的崩溃信息
+ *
+ * @param viewModel 调试日志 ViewModel，默认使用 viewModel() 创建
+ * @param onDismiss 关闭界面的回调
+ * @param modifier 修饰符
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DebugLogScreen(
@@ -62,6 +80,7 @@ fun DebugLogScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    // 收集 ViewModel 中的状态
     val uiState by viewModel.uiState.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val selectedSubCategory by viewModel.selectedSubCategory.collectAsState()
@@ -70,9 +89,11 @@ fun DebugLogScreen(
     val filteredLogs by viewModel.filteredLogs.collectAsState()
     val filteredFlowLogs by viewModel.filteredFlowLogs.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    
+
+    // 搜索框显示状态
     var showSearch by remember { mutableStateOf(false) }
 
+    // 进入界面时刷新日志，确保显示最新数据
     LaunchedEffect(Unit) {
         viewModel.refreshLogs()
         viewModel.refreshFlowLogs()
@@ -81,6 +102,7 @@ fun DebugLogScreen(
     Scaffold(
         topBar = {
             Column {
+                // 顶部工具栏
                 TopAppBar(
                     title = { Text("调试日志") },
                     navigationIcon = {
@@ -92,7 +114,8 @@ fun DebugLogScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { 
+                        // 刷新按钮：手动刷新日志列表
+                        IconButton(onClick = {
                             viewModel.refreshLogs()
                             viewModel.refreshFlowLogs()
                         }) {
@@ -101,25 +124,29 @@ fun DebugLogScreen(
                                 contentDescription = "刷新"
                             )
                         }
+                        // 搜索按钮：切换搜索框显示
                         IconButton(onClick = { showSearch = !showSearch }) {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "搜索"
                             )
                         }
+                        // 暂停/继续按钮：控制日志采集
                         IconButton(onClick = { viewModel.togglePause() }) {
                             Icon(
                                 imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                                 contentDescription = if (isPaused) "继续" else "暂停"
                             )
                         }
+                        // 清空按钮：清除所有日志
                         IconButton(onClick = { viewModel.clearLogs() }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "清空"
                             )
                         }
-                        IconButton(onClick = { 
+                        // 导出按钮：导出当前筛选的日志
+                        IconButton(onClick = {
                             val exportedText = viewModel.exportFilteredLogs()
                             context.share(exportedText, "导出调试日志")
                         }) {
@@ -130,7 +157,8 @@ fun DebugLogScreen(
                         }
                     }
                 )
-                
+
+                // 搜索框（可展开/收起）
                 AnimatedVisibility(
                     visible = showSearch,
                     enter = fadeIn(),
@@ -172,22 +200,23 @@ fun DebugLogScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // 分类标签页（排除 RULE，因为它作为 SOURCE 的子分类显示）
             DebugCategoryTabs(
                 selectedCategory = selectedCategory,
-                categories = DebugCategory.entries.filter { 
-                    it != DebugCategory.CHECK && 
-                    it != DebugCategory.CRASH && 
-                    it != DebugCategory.RULE 
+                categories = DebugCategory.entries.filter {
+                    it != DebugCategory.RULE
                 },
                 onCategorySelected = viewModel::selectCategory
             )
 
+            // 书源分类的子分类选择器
             if (selectedCategory == DebugCategory.SOURCE) {
                 SourceSubCategoryTabs(
                     selectedSubCategory = selectedSubCategory,
                     onSubCategorySelected = viewModel::selectSubCategory
                 )
-                
+
+                // 流程日志的阶段筛选器
                 if (selectedSubCategory == SourceSubCategory.FLOW) {
                     FlowStageFilter(
                         selectedStage = selectedFlowStage,
@@ -198,15 +227,18 @@ fun DebugLogScreen(
 
             HorizontalDivider()
 
+            // 日志内容区域
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
+                    // 加载中状态
                     uiState.isLoading -> {
                         LoadingIndicator()
                     }
+                    // 书源流程日志视图
                     selectedCategory == DebugCategory.SOURCE && selectedSubCategory == SourceSubCategory.FLOW -> {
                         if (filteredFlowLogs.isEmpty()) {
                             EmptyState(
-                                message = if (searchQuery.isNullOrBlank()) "暂无流程日志" 
+                                message = if (searchQuery.isNullOrBlank()) "暂无流程日志"
                                          else "未找到匹配的日志"
                             )
                         } else {
@@ -217,12 +249,14 @@ fun DebugLogScreen(
                             )
                         }
                     }
+                    // 空状态
                     uiState.isEmpty || filteredLogs.isEmpty() -> {
                         EmptyState(
-                            message = if (searchQuery.isNullOrBlank()) "暂无调试日志" 
+                            message = if (searchQuery.isNullOrBlank()) "暂无调试日志"
                                      else "未找到匹配的日志"
                         )
                     }
+                    // 普通日志列表
                     else -> {
                         DebugLogList(
                             logs = filteredLogs,
@@ -232,6 +266,7 @@ fun DebugLogScreen(
                     }
                 }
 
+                // 日志详情弹窗
                 if (uiState.selectedLog != null) {
                     DebugLogDetailDialog(
                         log = uiState.selectedLog!!,
@@ -240,6 +275,7 @@ fun DebugLogScreen(
                     )
                 }
 
+                // 流程日志详情弹窗
                 if (uiState.selectedFlowLog != null) {
                     FlowLogDetailDialog(
                         log = uiState.selectedFlowLog!!,
@@ -252,6 +288,9 @@ fun DebugLogScreen(
     }
 }
 
+/**
+ * 加载指示器
+ */
 @Composable
 private fun LoadingIndicator() {
     Box(
@@ -266,6 +305,8 @@ private fun LoadingIndicator() {
 
 /**
  * 空状态提示
+ *
+ * @param message 提示消息
  */
 @Composable
 private fun EmptyState(message: String) {
@@ -285,6 +326,12 @@ private fun EmptyState(message: String) {
 
 /**
  * 日志列表容器
+ *
+ * 使用 LazyColumn 实现高性能的日志列表滚动
+ *
+ * @param logs 日志列表
+ * @param onLogClick 日志点击回调
+ * @param onCopyLog 日志长按复制回调
  */
 @Composable
 private fun DebugLogList(
@@ -315,6 +362,17 @@ private fun DebugLogList(
 
 /**
  * 源日志子分类选择器
+ *
+ * 用于书源分类下的子分类筛选：
+ * - 全部：显示所有书源相关日志
+ * - 更新：书源更新相关
+ * - 搜索：书源搜索相关
+ * - 目录：书源目录相关
+ * - 正文：书源正文相关
+ * - 流程：书源操作流程日志
+ *
+ * @param selectedSubCategory 当前选中的子分类
+ * @param onSubCategorySelected 子分类选择回调
  */
 @Composable
 private fun SourceSubCategoryTabs(
@@ -332,11 +390,13 @@ private fun SourceSubCategoryTabs(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
         ) {
+            // "全部"选项
             androidx.compose.material3.FilterChip(
                 selected = selectedSubCategory == null,
                 onClick = { onSubCategorySelected(null) },
                 label = { Text("全部") }
             )
+            // 各子分类选项
             SourceSubCategory.entries.forEach { subCategory ->
                 androidx.compose.material3.FilterChip(
                     selected = selectedSubCategory == subCategory,
