@@ -146,11 +146,25 @@ object BookInfo {
                 ?.let {
                     if (it.isNotEmpty()) book.kind = it
                     Debug.log(bookSource.bookSourceUrl, "└${it}")
+                    
+                    FlowLogRecorder.logExtract(
+                        source = bookSource,
+                        message = "提取分类",
+                        rule = infoRule.kind,
+                        result = it
+                    )
                 } ?: Debug.log(bookSource.bookSourceUrl, "└")
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
             DebugLog.e("获取分类出错", e)
+            
+            FlowLogRecorder.logExtract(
+                source = bookSource,
+                message = "提取分类",
+                rule = infoRule.kind,
+                error = e
+            )
         }
         currentCoroutineContext().ensureActive()
         Debug.log(bookSource.bookSourceUrl, "┌获取字数")
@@ -158,11 +172,25 @@ object BookInfo {
             wordCountFormat(analyzeRule.getString(infoRule.wordCount)).let {
                 if (it.isNotEmpty()) book.wordCount = it
                 Debug.log(bookSource.bookSourceUrl, "└${it}")
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取字数",
+                    rule = infoRule.wordCount,
+                    result = it
+                )
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
             DebugLog.e("获取字数出错", e)
+            
+            FlowLogRecorder.logExtract(
+                source = bookSource,
+                message = "提取字数",
+                rule = infoRule.wordCount,
+                error = e
+            )
         }
         currentCoroutineContext().ensureActive()
         Debug.log(bookSource.bookSourceUrl, "┌获取最新章节")
@@ -170,11 +198,25 @@ object BookInfo {
             analyzeRule.getString(infoRule.lastChapter).let {
                 if (it.isNotEmpty()) book.latestChapterTitle = it
                 Debug.log(bookSource.bookSourceUrl, "└${it}")
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取最新章节",
+                    rule = infoRule.lastChapter,
+                    result = it
+                )
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
             DebugLog.e("获取最新章节出错", e)
+            
+            FlowLogRecorder.logExtract(
+                source = bookSource,
+                message = "提取最新章节",
+                rule = infoRule.lastChapter,
+                error = e
+            )
         }
         currentCoroutineContext().ensureActive()
         Debug.log(bookSource.bookSourceUrl, "┌获取简介")
@@ -184,16 +226,37 @@ object BookInfo {
             if (introTrimS.startsWith("<usehtml>") || introTrimS.startsWith("<md>") || introTrimS.startsWith("<useweb>")) {
                 book.intro = introTrimS
                 Debug.log(bookSource.bookSourceUrl, "└${introTrimS}")
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取简介",
+                    rule = infoRule.intro,
+                    result = introTrimS
+                )
             } else {
                 HtmlFormatter.format(intro).let {
                     if (it.isNotEmpty()) book.intro = it
                     Debug.log(bookSource.bookSourceUrl, "└${it}")
+                    
+                    FlowLogRecorder.logExtract(
+                        source = bookSource,
+                        message = "提取简介",
+                        rule = infoRule.intro,
+                        result = it
+                    )
                 }
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
             DebugLog.e("获取简介出错", e)
+            
+            FlowLogRecorder.logExtract(
+                source = bookSource,
+                message = "提取简介",
+                rule = infoRule.intro,
+                error = e
+            )
         }
         currentCoroutineContext().ensureActive()
         Debug.log(bookSource.bookSourceUrl, "┌获取封面链接")
@@ -204,11 +267,25 @@ object BookInfo {
                         NetworkUtils.getAbsoluteURL(redirectUrl, it)
                 }
                 Debug.log(bookSource.bookSourceUrl, "└${it}")
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取封面链接",
+                    rule = infoRule.coverUrl,
+                    result = book.coverUrl
+                )
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
             DebugLog.e("获取封面出错", e)
+            
+            FlowLogRecorder.logExtract(
+                source = bookSource,
+                message = "提取封面链接",
+                rule = infoRule.coverUrl,
+                error = e
+            )
         }
         currentCoroutineContext().ensureActive()
         if (!book.isWebFile) {
@@ -219,6 +296,13 @@ object BookInfo {
                 book.tocHtml = body
             }
             Debug.log(bookSource.bookSourceUrl, "└${book.tocUrl}")
+            
+            FlowLogRecorder.logExtract(
+                source = bookSource,
+                message = "提取目录链接",
+                rule = infoRule.tocUrl,
+                result = book.tocUrl
+            )
         } else {
             Debug.log(bookSource.bookSourceUrl, "┌获取文件下载链接")
             book.downloadUrls = analyzeRule.getStringList(infoRule.downloadUrls, isUrl = true)
@@ -229,6 +313,13 @@ object BookInfo {
                 Debug.log(
                     bookSource.bookSourceUrl,
                     "└" + TextUtils.join("，\n", book.downloadUrls!!)
+                )
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取文件下载链接",
+                    rule = infoRule.downloadUrls,
+                    result = book.downloadUrls?.joinToString("\n")
                 )
             }
         }

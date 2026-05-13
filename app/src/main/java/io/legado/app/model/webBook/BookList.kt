@@ -323,9 +323,23 @@ object BookList {
             try {
                 searchBook.kind = analyzeRule.getStringList(ruleKind)?.joinToString(",")
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.kind ?: ""}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取分类",
+                    rule = ruleKind.joinToString("&&") { it.rule },
+                    result = searchBook.kind
+                )
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取分类",
+                    rule = ruleKind.joinToString("&&") { it.rule },
+                    error = e
+                )
             }
             if (filter?.invoke(searchBook.name, searchBook.author, searchBook.kind) == false) {
                 return null
@@ -335,27 +349,69 @@ object BookList {
             try {
                 searchBook.wordCount = wordCountFormat(analyzeRule.getString(ruleWordCount))
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.wordCount}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取字数",
+                    rule = ruleWordCount.joinToString("&&") { it.rule },
+                    result = searchBook.wordCount
+                )
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取字数",
+                    rule = ruleWordCount.joinToString("&&") { it.rule },
+                    error = e
+                )
             }
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "┌获取最新章节", log)
             try {
                 searchBook.latestChapterTitle = analyzeRule.getString(ruleLastChapter)
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.latestChapterTitle}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取最新章节",
+                    rule = ruleLastChapter.joinToString("&&") { it.rule },
+                    result = searchBook.latestChapterTitle
+                )
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取最新章节",
+                    rule = ruleLastChapter.joinToString("&&") { it.rule },
+                    error = e
+                )
             }
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "┌获取简介", log)
             try {
                 searchBook.intro = HtmlFormatter.format(analyzeRule.getString(ruleIntro))
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.intro}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取简介",
+                    rule = ruleIntro.joinToString("&&") { it.rule },
+                    result = searchBook.intro
+                )
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取简介",
+                    rule = ruleIntro.joinToString("&&") { it.rule },
+                    error = e
+                )
             }
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "┌获取封面链接", log)
@@ -366,9 +422,23 @@ object BookList {
                     }
                 }
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.coverUrl ?: ""}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取封面链接",
+                    rule = ruleCoverUrl.joinToString("&&") { it.rule },
+                    result = searchBook.coverUrl
+                )
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
+                
+                FlowLogRecorder.logExtract(
+                    source = bookSource,
+                    message = "提取封面链接",
+                    rule = ruleCoverUrl.joinToString("&&") { it.rule },
+                    error = e
+                )
             }
             currentCoroutineContext().ensureActive()
             Debug.log(bookSource.bookSourceUrl, "┌获取详情页链接", log)
@@ -377,6 +447,14 @@ object BookList {
                 searchBook.bookUrl = baseUrl
             }
             Debug.log(bookSource.bookSourceUrl, "└${searchBook.bookUrl}", log)
+            
+            FlowLogRecorder.logExtract(
+                source = bookSource,
+                message = "提取详情页链接",
+                rule = ruleBookUrl.joinToString("&&") { it.rule },
+                result = searchBook.bookUrl
+            )
+            
             return searchBook
         }
         return null
