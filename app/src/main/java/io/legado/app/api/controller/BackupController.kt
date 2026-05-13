@@ -346,6 +346,9 @@ object BackupController {
             },
             BackupItemDef("servers.json", "服务器配置", "远程服务器配置（加密）") {
                 appDb.serverDao.all.size
+            },
+            BackupItemDef("runtimeSourceCache.json", "书源运行数据", "书源登录信息和运行变量") {
+                appDb.cacheDao.getRuntimeSourceCaches(System.currentTimeMillis()).size
             }
         )
 

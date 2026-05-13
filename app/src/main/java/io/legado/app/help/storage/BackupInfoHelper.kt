@@ -42,7 +42,7 @@ object BackupInfoHelper {
 
     private val categoryConfig = listOf(
         CategoryDef("书籍相关", "📚", listOf("bookshelf", "bookmark", "bookGroup", "readRecord")),
-        CategoryDef("源相关", "📡", listOf("bookSource", "rssSource", "rssStar", "sourceSub")),
+        CategoryDef("源相关", "📡", listOf("bookSource", "rssSource", "rssStar", "sourceSub", "runtimeSourceCache")),
         CategoryDef("规则相关", "🔧", listOf("replaceRule", "txtTocRule", "dictRule", "keyboardAssist")),
         CategoryDef("语音相关", "🔊", listOf("httpTTS")),
         CategoryDef("配置相关", "⚙️", listOf("config", "videoConfig", "readConfig", "shareConfig", "coverConfig", "servers"))
@@ -64,6 +64,7 @@ object BackupInfoHelper {
         "keyboardAssists.json" to "键盘辅助",
         "dictRule.json" to "词典规则",
         "servers.json" to "服务器配置",
+        "runtimeSourceCache.json" to "书源运行数据",
         ReadBookConfig.configFileName to "阅读样式配置",
         ReadBookConfig.shareConfigFileName to "共享阅读配置",
         ThemeConfig.configFileName to "主题配置",
@@ -109,6 +110,19 @@ object BackupInfoHelper {
             totalSize += estimatedSize
             if (selected) selectedSize += estimatedSize
             items.add(BackupFileInfo(fileName, displayName, estimatedSize, selected))
+        }
+
+        if (BackupConfig.fullBackup) {
+            val runtimeCacheCount = appDb.cacheDao.getRuntimeSourceCaches(System.currentTimeMillis()).size
+            if (runtimeCacheCount > 0) {
+                val fileName = "runtimeSourceCache.json"
+                val displayName = displayNameMap[fileName] ?: fileName
+                val estimatedSize = runtimeCacheCount * 500L
+                val selected = isFileSelected(fileName)
+                totalSize += estimatedSize
+                if (selected) selectedSize += estimatedSize
+                items.add(BackupFileInfo(fileName, displayName, estimatedSize, selected))
+            }
         }
 
         val configFiles = listOf(
