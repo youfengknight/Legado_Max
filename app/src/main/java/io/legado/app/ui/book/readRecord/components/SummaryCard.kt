@@ -29,6 +29,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +41,7 @@ import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.readRecord.readRecordBookStackSurfaceColor
+import io.legado.app.ui.book.readRecord.readRecordCardBorder
 import io.legado.app.ui.book.readRecord.readRecordMutedIconTint
 import io.legado.app.ui.book.readRecord.readRecordSecondaryTextColor
 import io.legado.app.ui.book.readRecord.readRecordSummaryCardContainerColor
@@ -56,16 +59,27 @@ fun SummaryCard(
     val minutes = (totalReadTime / (1000 * 60)) % 60
     val timeString = if (hours > 0) "${hours}小时${minutes}分钟" else "${minutes}分钟"
     val shape = RoundedCornerShape(16.dp)
-    val cardColor = readRecordSummaryCardContainerColor()
+    val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.18f
+    val cardColor = if (isDarkBackground) {
+        lerp(
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.surfaceVariant,
+            0.72f
+        )
+    } else {
+        readRecordSummaryCardContainerColor()
+    }
+    val border = readRecordCardBorder()
     val secondaryTextColor = readRecordSecondaryTextColor()
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .shadow(8.dp, shape, clip = false),
+            .shadow(if (isDarkBackground) 0.dp else 8.dp, shape, clip = false),
         shape = shape,
-        color = cardColor
+        color = cardColor,
+        border = border
     ) {
         Row(
             modifier = Modifier

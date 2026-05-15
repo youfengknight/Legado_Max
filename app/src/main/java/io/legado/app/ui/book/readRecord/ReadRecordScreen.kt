@@ -863,6 +863,8 @@ private fun RecordDetailItem(
     val deleteAction = rememberSwipeDeleteAction(onDelete)
     var chapterTitle by remember { mutableStateOf<String?>(null) }
     val containerColor = readRecordCardContainerColor()
+    val border = readRecordCardBorder()
+    val secondaryTextColor = readRecordSecondaryTextColor()
 
     LaunchedEffect(detail.bookName, detail.bookAuthor) {
         chapterTitle = viewModel.getBookDurChapterTitle(detail.bookName, detail.bookAuthor)
@@ -878,7 +880,8 @@ private fun RecordDetailItem(
                     onLongClick = onLongClick
                 ),
             color = containerColor,
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            border = border
         ) {
             Row(
                 modifier = Modifier
@@ -912,13 +915,13 @@ private fun RecordDetailItem(
                     Text(
                         text = detail.bookAuthor.ifBlank { "未知作者" },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = secondaryTextColor
                     )
                     chapterTitle?.let {
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = secondaryTextColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -928,7 +931,7 @@ private fun RecordDetailItem(
                 Text(
                     text = formatReadDuration(detail.readTime),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = secondaryTextColor
                 )
             }
         }
@@ -947,7 +950,8 @@ private fun RecordDetailItem(
                         onLongClick = onLongClick
                     ),
                 color = containerColor,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                border = border
             ) {
                 Row(
                     modifier = Modifier
@@ -976,13 +980,13 @@ private fun RecordDetailItem(
                         Text(
                             text = detail.bookAuthor.ifBlank { "未知作者" },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = secondaryTextColor
                         )
                         chapterTitle?.let {
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = secondaryTextColor,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -992,7 +996,7 @@ private fun RecordDetailItem(
                     Text(
                         text = formatReadDuration(detail.readTime),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = secondaryTextColor
                     )
                 }
             }
@@ -1015,6 +1019,8 @@ private fun LatestRecordItem(
     var showMenu by remember { mutableStateOf(false) }
     var chapterTitle by remember { mutableStateOf<String?>(null) }
     val containerColor = readRecordCardContainerColor()
+    val border = readRecordCardBorder()
+    val secondaryTextColor = readRecordSecondaryTextColor()
 
     LaunchedEffect(record.bookName, record.bookAuthor) {
         chapterTitle = viewModel.getBookDurChapterTitle(record.bookName, record.bookAuthor)
@@ -1029,7 +1035,8 @@ private fun LatestRecordItem(
                 onLongClick = onLongClick
             ),
         color = containerColor,
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        border = border
     ) {
         Row(
             modifier = Modifier
@@ -1065,13 +1072,13 @@ private fun LatestRecordItem(
                 Text(
                     text = record.bookAuthor.ifBlank { "未知作者" },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = secondaryTextColor
                 )
                 chapterTitle?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = secondaryTextColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1083,24 +1090,24 @@ private fun LatestRecordItem(
                     Text(
                         text = formatReadDuration(record.readTime),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = secondaryTextColor
                     )
                     Text(
                         text = "·",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = secondaryTextColor
                     )
                     Text(
                         text = formatDateTime(record.lastRead),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = secondaryTextColor
                     )
                 }
             }
             if (!isSelectionMode) {
                 Box {
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "更多", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.MoreVert, contentDescription = "更多", tint = readRecordMutedIconTint())
                     }
                     DropdownMenu(
                         expanded = showMenu,
@@ -1114,7 +1121,7 @@ private fun LatestRecordItem(
                                 showMenu = false
                             },
                             leadingIcon = { 
-                                Icon(Icons.Default.Merge, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) 
+                                Icon(Icons.Default.Merge, contentDescription = null, tint = readRecordMutedIconTint()) 
                             }
                         )
                         DropdownMenuItem(
@@ -1147,6 +1154,8 @@ private fun ReadTimeRecordItem(
 ) {
     var chapterTitle by remember { mutableStateOf<String?>(null) }
     val containerColor = readRecordCardContainerColor()
+    val border = readRecordCardBorder()
+    val secondaryTextColor = readRecordSecondaryTextColor()
 
     LaunchedEffect(record.bookName, record.bookAuthor) {
         chapterTitle = viewModel.getBookDurChapterTitle(record.bookName, record.bookAuthor)
@@ -1164,7 +1173,8 @@ private fun ReadTimeRecordItem(
                     onLongClick = onLongClick
                 ),
             color = containerColor,
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            border = border
         ) {
             Row(
                 modifier = Modifier
@@ -1198,13 +1208,13 @@ private fun ReadTimeRecordItem(
                     Text(
                         text = record.bookAuthor.ifBlank { "未知作者" },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = secondaryTextColor
                     )
                     chapterTitle?.let {
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = secondaryTextColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1234,7 +1244,8 @@ private fun ReadTimeRecordItem(
                         onLongClick = onLongClick
                     ),
                 color = containerColor,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                border = border
             ) {
                 Row(
                     modifier = Modifier
@@ -1263,13 +1274,13 @@ private fun ReadTimeRecordItem(
                         Text(
                             text = record.bookAuthor.ifBlank { "未知作者" },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = secondaryTextColor
                         )
                         chapterTitle?.let {
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = secondaryTextColor,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

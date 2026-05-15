@@ -132,64 +132,90 @@ fun ReadRecordContent(
     val context = LocalContext.current
     
     val isNightTheme = AppConfig.isNightTheme
-    val primaryColor = ThemeStore.primaryColor(context)
-    val accentColor = ThemeStore.accentColor(context)
-    val bgColor = ThemeStore.backgroundColor(context)
-    val textPrimaryColor = ThemeStore.textColorPrimary(context)
-    val textSecondaryColor = ThemeStore.textColorSecondary(context)
+    val primaryColor = remember { ThemeStore.primaryColor(context) }
+    val accentColor = remember { ThemeStore.accentColor(context) }
+    val bgColor = remember { ThemeStore.backgroundColor(context) }
+    val textPrimaryColor = remember { ThemeStore.textColorPrimary(context) }
+    val textSecondaryColor = remember { ThemeStore.textColorSecondary(context) }
     
     val isLight = !isNightTheme && ColorUtils.isColorLight(bgColor)
-    val background = Color(bgColor)
-    val primary = Color(accentColor)
-    val secondary = Color(primaryColor)
-    val onBackground = Color(textPrimaryColor)
-    val onBackgroundVariant = Color(textSecondaryColor)
+    val background = remember(bgColor) { Color(bgColor) }
+    val primary = remember(accentColor) { Color(accentColor) }
+    val secondary = remember(primaryColor) { Color(primaryColor) }
+    val onBackground = remember(textPrimaryColor) { Color(textPrimaryColor) }
+    val onBackgroundVariant = remember(textSecondaryColor) { Color(textSecondaryColor) }
     
-    val surface = lerp(background, if (isLight) Color.White else Color.Black, if (isLight) 0.04f else 0.10f)
-    val surfaceVariant = lerp(background, onBackground, if (isLight) 0.05f else 0.14f)
-    val outline = lerp(background, onBackground, if (isLight) 0.12f else 0.24f)
-    val onSurfaceVariant = lerp(onBackground, if (isLight) Color.Black else Color.White, if (isLight) 0.2f else 0.2f)
+    val surface = remember(background, isLight) {
+        lerp(background, Color.White, if (isLight) 0.04f else 0.10f)
+    }
+    val surfaceVariant = remember(background, onBackground, isLight) {
+        lerp(background, onBackground, if (isLight) 0.05f else 0.14f)
+    }
+    val outline = remember(background, onBackground, isLight) {
+        lerp(background, onBackground, if (isLight) 0.12f else 0.24f)
+    }
+    val pagePrimary = remember(primary, isLight) {
+        if (isLight) primary else lerp(primary, Color.White, 0.20f)
+    }
+    val pageOnBackgroundVariant = remember(onBackgroundVariant, onBackground, isLight) {
+        if (isLight) onBackgroundVariant else lerp(onBackgroundVariant, onBackground, 0.32f)
+    }
+    val pageSurfaceVariant = remember(surfaceVariant, onBackground, isLight) {
+        if (isLight) surfaceVariant else lerp(surfaceVariant, onBackground, 0.08f)
+    }
 
-    val colorScheme = if (isLight) {
+    val colorScheme = remember(
+        isLight,
+        pagePrimary,
+        secondary,
+        background,
+        onBackground,
+        pageOnBackgroundVariant,
+        surface,
+        pageSurfaceVariant,
+        outline
+    ) {
+        if (isLight) {
         lightColorScheme(
-            primary = primary,
+            primary = pagePrimary,
             secondary = secondary,
             tertiary = secondary,
             background = background,
             surface = surface,
-            surfaceVariant = surfaceVariant,
-            secondaryContainer = surfaceVariant,
-            tertiaryContainer = surfaceVariant,
+            surfaceVariant = pageSurfaceVariant,
+            secondaryContainer = pageSurfaceVariant,
+            tertiaryContainer = pageSurfaceVariant,
             outline = outline,
             outlineVariant = outline.copy(alpha = 0.75f),
             onPrimary = if (ColorUtils.isColorLight(accentColor)) Color.Black else Color.White,
             onSecondary = if (ColorUtils.isColorLight(primaryColor)) Color.Black else Color.White,
             onBackground = onBackground,
             onSurface = onBackground,
-            onSurfaceVariant = onSurfaceVariant,
+            onSurfaceVariant = pageOnBackgroundVariant,
             error = Color(0xFFE53935),
             onError = Color.White
         )
     } else {
         darkColorScheme(
-            primary = primary,
+            primary = pagePrimary,
             secondary = secondary,
             tertiary = secondary,
             background = background,
             surface = surface,
-            surfaceVariant = surfaceVariant,
-            secondaryContainer = surfaceVariant,
-            tertiaryContainer = surfaceVariant,
+            surfaceVariant = pageSurfaceVariant,
+            secondaryContainer = pageSurfaceVariant,
+            tertiaryContainer = pageSurfaceVariant,
             outline = outline,
             outlineVariant = outline.copy(alpha = 0.8f),
             onPrimary = if (ColorUtils.isColorLight(accentColor)) Color.Black else Color.White,
             onSecondary = if (ColorUtils.isColorLight(primaryColor)) Color.Black else Color.White,
             onBackground = onBackground,
             onSurface = onBackground,
-            onSurfaceVariant = onSurfaceVariant,
+            onSurfaceVariant = pageOnBackgroundVariant,
             error = Color(0xFFFF5252),
             onError = Color.Black
         )
+    }
     }
     
     MaterialTheme(colorScheme = colorScheme) {

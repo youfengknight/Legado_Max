@@ -17,6 +17,7 @@ package io.legado.app.ui.book.source.check
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -37,11 +38,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,6 +52,11 @@ import io.legado.app.R
 import kotlinx.coroutines.delay
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.data.entities.BookSource
+import io.legado.app.ui.theme.pageAccentColor
+import io.legado.app.ui.theme.pageMutedIconTint
+import io.legado.app.ui.theme.pageSecondaryTextColor
+import io.legado.app.ui.theme.pageSurfaceVariantColor
+import io.legado.app.ui.theme.pageTopBarContainerColor
 import io.legado.app.utils.sendToClip
 
 /**
@@ -399,7 +407,7 @@ fun CheckSourceTopBar(
     onClearClick: () -> Unit,
     onConfigClick: () -> Unit
 ) {
-    val containerColor = checkSourceCardContainerColor()
+    val containerColor = pageTopBarContainerColor()
     val (titleText, subtitleText) = when (uiState) {
         is CheckSourceUIState.Idle -> "准备就绪" to "准备就绪"
         is CheckSourceUIState.Checking -> "检测中..." to "检测中..."
@@ -411,21 +419,23 @@ fun CheckSourceTopBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = containerColor,
             scrolledContainerColor = containerColor,
-            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+            navigationIconContentColor = MaterialTheme.colorScheme.onSecondary,
+            titleContentColor = MaterialTheme.colorScheme.onSecondary,
+            actionIconContentColor = MaterialTheme.colorScheme.onSecondary
         ),
         title = {
             Column {
                 Text(
                     text = stringResource(R.string.check_book_source),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 )
                 Text(
                     text = subtitleText,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = pageSecondaryTextColor()
                 )
             }
         },
@@ -488,12 +498,20 @@ fun ProgressCard(
     onReCheck: () -> Unit
 ) {
     val containerColor = checkSourceCardContainerColor()
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-
-    val gradientColors = listOf(
-        primaryColor.copy(alpha = 0.08f),
-        secondaryColor.copy(alpha = 0.08f)
+    val border = checkSourceCardBorder()
+    val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.18f
+    val outlinedButtonBorderColor = if (isDarkBackground) {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+    } else {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
+    }
+    val outlinedButtonColors = ButtonDefaults.outlinedButtonColors(
+        containerColor = if (isDarkBackground) {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+        } else {
+            Color.Transparent
+        },
+        contentColor = MaterialTheme.colorScheme.onSurface
     )
 
     Surface(
@@ -502,14 +520,12 @@ fun ProgressCard(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         color = containerColor,
         shape = RoundedCornerShape(16.dp),
-        shadowElevation = 4.dp
+        border = border,
+        shadowElevation = if (isDarkBackground) 0.dp else 4.dp
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(gradientColors)
-                )
         ) {
             Column(
                 modifier = Modifier
@@ -538,8 +554,11 @@ fun ProgressCard(
                                 CheckState.PAUSED -> "已暂停"
                                 CheckState.COMPLETED -> "检测完成"
                             },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -548,7 +567,7 @@ fun ProgressCard(
                             text = progress.progressText,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -573,13 +592,13 @@ fun ProgressCard(
                                 imageVector = Icons.Default.Source,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = pageMutedIconTint()
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = progress.currentSourceName,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = pageSecondaryTextColor(),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
@@ -593,7 +612,7 @@ fun ProgressCard(
                         Text(
                             text = currentMessage,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = pageSecondaryTextColor(),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -610,7 +629,9 @@ fun ProgressCard(
                         CheckState.IDLE -> {
                             OutlinedButton(
                                 onClick = onSelectSources,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                border = BorderStroke(1.dp, outlinedButtonBorderColor),
+                                colors = outlinedButtonColors
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.List,
@@ -637,7 +658,9 @@ fun ProgressCard(
                         CheckState.CHECKING -> {
                             OutlinedButton(
                                 onClick = onPauseCheck,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                border = BorderStroke(1.dp, outlinedButtonBorderColor),
+                                colors = outlinedButtonColors
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Pause,
@@ -665,7 +688,9 @@ fun ProgressCard(
                         CheckState.COMPLETED -> {
                             OutlinedButton(
                                 onClick = onReCheck,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                border = BorderStroke(1.dp, outlinedButtonBorderColor),
+                                colors = outlinedButtonColors
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
@@ -730,10 +755,10 @@ fun StatusIcon(
     )
 
     val (icon, tint) = when (checkState) {
-        CheckState.IDLE -> Icons.Default.CheckCircle to MaterialTheme.colorScheme.primary
-        CheckState.CHECKING -> Icons.Default.Sync to MaterialTheme.colorScheme.primary
+        CheckState.IDLE -> Icons.Default.CheckCircle to pageAccentColor()
+        CheckState.CHECKING -> Icons.Default.Sync to pageAccentColor()
         CheckState.PAUSED -> Icons.Default.PauseCircle to MaterialTheme.colorScheme.secondary
-        CheckState.COMPLETED -> Icons.Default.CheckCircle to Color(0xFF4CAF50)
+        CheckState.COMPLETED -> Icons.Default.CheckCircle to pageAccentColor()
     }
 
     Surface(
@@ -785,7 +810,7 @@ fun AnimatedProgressIndicator(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = pageSurfaceVariantColor()
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -814,6 +839,7 @@ fun StatisticsCard(
     statistics: CheckStatistics
 ) {
     val containerColor = checkSourceCardContainerColor()
+    val border = checkSourceCardBorder()
 
     Surface(
         modifier = Modifier
@@ -821,6 +847,7 @@ fun StatisticsCard(
             .padding(horizontal = 16.dp),
         color = containerColor,
         shape = RoundedCornerShape(12.dp),
+        border = border,
         shadowElevation = 2.dp
     ) {
         Row(
@@ -840,7 +867,7 @@ fun StatisticsCard(
                 icon = Icons.Default.CheckCircle,
                 label = "成功",
                 value = statistics.successCount.toString(),
-                color = Color(0xFF4CAF50)
+                color = pageAccentColor()
             )
 
             StatisticItem(
@@ -900,7 +927,7 @@ fun StatisticItem(
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Medium,
             color = color
         )
 
@@ -909,7 +936,7 @@ fun StatisticItem(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = pageSecondaryTextColor()
         )
     }
 }
@@ -1032,12 +1059,18 @@ fun ResultList(
  */
 @Composable
 fun EmptyStateView() {
+    val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.18f
     Column(
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+            color = if (isDarkBackground) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)
+            } else {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            },
             modifier = Modifier.size(80.dp)
         ) {
             Box(
@@ -1047,7 +1080,11 @@ fun EmptyStateView() {
                     imageVector = Icons.Default.Source,
                     contentDescription = null,
                     modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    tint = if (isDarkBackground) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
+                    } else {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    }
                 )
             }
         }
@@ -1057,7 +1094,8 @@ fun EmptyStateView() {
         Text(
             text = "暂无检测结果",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = pageSecondaryTextColor(),
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -1065,7 +1103,8 @@ fun EmptyStateView() {
         Text(
             text = "点击\"开始检测\"按钮开始检测书源",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            color = pageSecondaryTextColor().copy(alpha = 0.82f),
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -1085,8 +1124,9 @@ fun ResultItem(
     onEdit: () -> Unit,
     onDebug: () -> Unit
 ) {
-    val successColor = Color(0xFF4CAF50)
+    val successColor = pageAccentColor()
     val errorColor = MaterialTheme.colorScheme.error
+    val border = checkSourceCardBorder()
 
     Surface(
         modifier = Modifier
@@ -1094,6 +1134,7 @@ fun ResultItem(
             .clickable(onClick = onClick),
         color = containerColor,
         shape = RoundedCornerShape(12.dp),
+        border = border,
         shadowElevation = 1.dp
     ) {
         Row(
@@ -1155,12 +1196,12 @@ fun ResultItem(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant
+                        color = pageSurfaceVariantColor()
                     ) {
                         Text(
                             text = result.getRespondTimeText(),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = pageSecondaryTextColor(),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
@@ -1172,7 +1213,8 @@ fun ResultItem(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "重新检测",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
+                            tint = pageMutedIconTint()
                         )
                     }
                 }
@@ -1194,7 +1236,8 @@ fun ResultItem(
                         Icon(
                             imageVector = Icons.Default.BugReport,
                             contentDescription = "调试",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
+                            tint = pageMutedIconTint()
                         )
                     }
                     IconButton(
@@ -1204,7 +1247,8 @@ fun ResultItem(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "编辑",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
+                            tint = pageMutedIconTint()
                         )
                     }
                 }
@@ -1222,8 +1266,13 @@ fun ResultDetailDialog(
     onEdit: () -> Unit,
     onDebug: () -> Unit
 ) {
+    val dialogContainerColor = checkSourceCardContainerColor()
+    val dialogTextColor = MaterialTheme.colorScheme.onSurface
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = dialogContainerColor,
+        titleContentColor = dialogTextColor,
+        textContentColor = dialogTextColor,
         title = {
             Text(
                 text = result.sourceName,
@@ -1275,8 +1324,14 @@ fun SourcePickerDialog(
     onClear: () -> Unit,
     onStart: () -> Unit
 ) {
+    val sourceDialogContainerColor = checkSourceCardContainerColor()
+    val sourceDialogTextColor = MaterialTheme.colorScheme.onSurface
+    val sourceDialogSecondaryTextColor = pageSecondaryTextColor()
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = sourceDialogContainerColor,
+        titleContentColor = sourceDialogTextColor,
+        textContentColor = sourceDialogTextColor,
         title = {
             Text("选择书源")
         },
@@ -1294,7 +1349,7 @@ fun SourcePickerDialog(
                     Text(
                         text = "已选 ${selectedUrls.size} / ${sources.size}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = sourceDialogSecondaryTextColor
                     )
                     Row {
                         TextButton(onClick = onSelectAll) {
@@ -1320,20 +1375,26 @@ fun SourcePickerDialog(
                         ) {
                             Checkbox(
                                 checked = selectedUrls.contains(source.bookSourceUrl),
-                                onCheckedChange = { onToggleSource(source.bookSourceUrl) }
+                                onCheckedChange = { onToggleSource(source.bookSourceUrl) },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = pageAccentColor(),
+                                    uncheckedColor = sourceDialogSecondaryTextColor,
+                                    checkmarkColor = MaterialTheme.colorScheme.onPrimary
+                                )
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = source.bookSourceName,
                                     style = MaterialTheme.typography.bodyMedium,
+                                    color = sourceDialogTextColor,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = source.bookSourceUrl,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = sourceDialogSecondaryTextColor,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1365,11 +1426,12 @@ private fun DetailLine(label: String, value: String) {
     Text(
         text = label,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = pageSecondaryTextColor()
     )
     Text(
         text = value,
-        style = MaterialTheme.typography.bodyMedium
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface
     )
 }
 
@@ -1415,6 +1477,26 @@ fun getErrorTypeText(errorType: ErrorType): String {
 @Composable
 fun checkSourceCardContainerColor(): Color {
     val background = MaterialTheme.colorScheme.background
-    val alpha = if (background.luminance() > 0.5f) 0.95f else 0.95f
-    return MaterialTheme.colorScheme.surface.copy(alpha = alpha)
+    return if (background.luminance() < 0.18f) {
+        lerp(
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.surfaceVariant,
+            0.72f
+        )
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+    }
+}
+
+@Composable
+fun checkSourceCardBorder(): BorderStroke? {
+    val background = MaterialTheme.colorScheme.background
+    return if (background.luminance() < 0.18f) {
+        BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.42f)
+        )
+    } else {
+        null
+    }
 }
