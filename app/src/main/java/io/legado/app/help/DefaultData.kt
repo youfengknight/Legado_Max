@@ -36,6 +36,10 @@ object DefaultData {
                 if (LocalConfig.needUpDictRule) {
                     importDefaultDictRules()
                 }
+                if (LocalConfig.needUpThemeConfig) {
+                    ThemeConfig.mergeDefaultThemes()
+                    ThemeConfig.updateDefaultThemeColors(appCtx)
+                }
             }.onError {
                 it.printOnDebug()
             }

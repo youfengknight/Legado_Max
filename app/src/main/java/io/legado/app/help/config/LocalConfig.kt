@@ -130,6 +130,13 @@ by appCtx.getSharedPreferences("local_plus", Context.MODE_PRIVATE) {
         get() = !isLastVersion(2, "needUpDictRule")
 
     /**
+     * 是否需要更新主题配置
+     * version=2, 版本号低于此值时会合并新的默认主题
+     */
+    val needUpThemeConfig: Boolean
+        get() = !isLastVersion(2, "themeConfigVersion")
+
+    /**
      * 应用版本号
      * 用于判断是否需要执行默认数据导入等升级操作
      */

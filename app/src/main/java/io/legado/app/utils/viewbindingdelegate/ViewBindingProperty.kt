@@ -40,7 +40,11 @@ public abstract class ViewBindingProperty<in R : Any, T : ViewBinding>(
     public fun clear() {
         val thisRef = thisRef ?: return
         this.thisRef = null
-        getLifecycleOwner(thisRef).lifecycle.removeObserver(lifecycleObserver)
+        try {
+            getLifecycleOwner(thisRef).lifecycle.removeObserver(lifecycleObserver)
+        } catch (e: IllegalStateException) {
+            // View 已经销毁，viewLifecycleOwner 不可访问，观察者会自动被移除
+        }
         mainHandler.post { viewBinding = null }
     }
 

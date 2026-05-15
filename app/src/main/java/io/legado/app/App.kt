@@ -36,6 +36,7 @@ import io.legado.app.help.CrashHandler
 import io.legado.app.help.DefaultData
 import io.legado.app.help.DispatchersMonitor
 import io.legado.app.help.LifecycleHelp
+import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
@@ -75,6 +76,7 @@ class App : Application() {
         }
         oldConfig = Configuration(resources.configuration)
         applyDayNightInit(this)
+        LauncherIconHelp.fixLauncherIconPref()
         registerActivityLifecycleCallbacks(LifecycleHelp)
         defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
         Coroutine.async {

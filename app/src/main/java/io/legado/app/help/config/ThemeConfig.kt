@@ -150,6 +150,49 @@ object ThemeConfig {
         addConfigs(getConfigs())
     }
 
+    /**
+     * 合并默认主题配置
+     * 用于版本更新时将新的默认主题添加到用户已有的主题列表中
+     * 不会覆盖用户已有的同名主题
+     */
+    fun mergeDefaultThemes() {
+        val defaultThemes = DefaultData.themeConfigs
+        var hasNew = false
+        defaultThemes.forEach { defaultTheme ->
+            val exists = configList.any { it.themeName == defaultTheme.themeName }
+            if (!exists) {
+                configList.add(defaultTheme)
+                hasNew = true
+            }
+        }
+        if (hasNew) {
+            save()
+        }
+    }
+
+    /**
+     * 更新默认主题颜色
+     * 如果用户使用的是旧的默认主题，则更新为新的默认主题颜色
+     */
+    fun updateDefaultThemeColors(context: Context) {
+        val dayThemeName = context.getPrefString(PreferKey.dThemeName)
+        val nightThemeName = context.getPrefString(PreferKey.dNThemeName)
+        
+        if (dayThemeName.isNullOrEmpty() || dayThemeName == "默认") {
+            val classicWhite = configList.find { it.themeName == "经典白" }
+            if (classicWhite != null) {
+                applyConfig(context, classicWhite)
+            }
+        }
+        
+        if (nightThemeName.isNullOrEmpty() || nightThemeName == "默认") {
+            val aScreenBlack = configList.find { it.themeName == "A屏黑" }
+            if (aScreenBlack != null) {
+                applyConfig(context, aScreenBlack)
+            }
+        }
+    }
+
     fun replaceConfigs(newConfigs: List<Config>?) {
         val validConfigs = newConfigs?.filter { validateConfig(it) } ?: emptyList()
         configList.clear()
