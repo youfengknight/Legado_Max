@@ -1210,11 +1210,13 @@
     <string name="clear_webview_data_summary">清除内置浏览器所有数据</string>
     <string name="source_tab_list">列表</string>
     <string name="dict_rule">字典规则</string>
+    <string name="dict_rule_search">字典规则-搜索</string>
     <string name="config_dict_rule">配置字典规则</string>
     <string name="create">新建</string>
     <string name="url_rule">url规则(urlRule)</string>
     <string name="show_rule">显示规则(showRule)</string>
     <string name="config_txt_toc_rule">配置 TXT 目录规则</string>
+    <string name="txt_toc_rule_search">TXT目录规则-搜索</string>
     <string name="import_dict_rule">导入字典规则</string>
     <string name="keep_group">保留分组</string>
     <string name="server_config">服务器配置</string>

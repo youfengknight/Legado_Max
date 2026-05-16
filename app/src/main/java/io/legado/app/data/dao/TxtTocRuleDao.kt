@@ -10,6 +10,15 @@ interface TxtTocRuleDao {
     @Query("select * from txtTocRules order by serialNumber")
     fun observeAll(): Flow<List<TxtTocRule>>
 
+    @Query("select * from txtTocRules where name like :key order by serialNumber")
+    fun observeSearch(key: String): Flow<List<TxtTocRule>>
+
+    @Query("select * from txtTocRules where enable = 1 order by serialNumber")
+    fun observeEnabled(): Flow<List<TxtTocRule>>
+
+    @Query("select * from txtTocRules where enable != 1 order by serialNumber")
+    fun observeDisabled(): Flow<List<TxtTocRule>>
+
     @get:Query("select * from txtTocRules order by serialNumber")
     val all: List<TxtTocRule>
 

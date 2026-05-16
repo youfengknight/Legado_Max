@@ -6,6 +6,7 @@ import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.viewModels
 import androidx.appcompat.widget.PopupMenu
+import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import io.legado.app.R
@@ -18,6 +19,7 @@ import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.ui.association.ImportTxtTocRuleDialog
 import io.legado.app.ui.association.ImportUrlDialogHelper
 import io.legado.app.ui.browser.WebViewActivity
@@ -30,6 +32,7 @@ import io.legado.app.ui.widget.recycler.VerticalDivider
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.ACache
 import io.legado.app.utils.GSON
+import io.legado.app.utils.applyTint
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.launch
 import io.legado.app.help.ExportResultHandler
@@ -41,12 +44,15 @@ import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
 class TxtTocRuleActivity : VMBaseActivity<ActivityTxtTocRuleBinding, TxtTocRuleViewModel>(),
+    SearchView.OnQueryTextListener,
     TxtTocRuleAdapter.CallBack,
     SelectActionBar.CallBack,
     TxtTocRuleEditDialog.Callback,
@@ -57,6 +63,10 @@ class TxtTocRuleActivity : VMBaseActivity<ActivityTxtTocRuleBinding, TxtTocRuleV
     private val adapter: TxtTocRuleAdapter by lazy {
         TxtTocRuleAdapter(this, this)
     }
+    private val searchView: SearchView by lazy {
+        binding.titleBar.findViewById(R.id.search_view)
+    }
+    private var txtTocRuleFlowJob: Job? = null
     private val importTocRuleKey = "tocRuleUrl"
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
@@ -75,6 +85,7 @@ class TxtTocRuleActivity : VMBaseActivity<ActivityTxtTocRuleBinding, TxtTocRuleV
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         initView()
+        initSearchView()
         initBottomActionBar()
         initData()
     }
@@ -86,15 +97,19 @@ class TxtTocRuleActivity : VMBaseActivity<ActivityTxtTocRuleBinding, TxtTocRuleV
         val showFastScroller = AppConfig.showBookshelfFastScroller
         recyclerView.setFastScrollEnabled(showFastScroller)
         recyclerView.isVerticalScrollBarEnabled = !showFastScroller
-        // When this page is opened, it is in selection mode
         val dragSelectTouchHelper =
             DragSelectTouchHelper(adapter.dragSelectCallback).setSlideArea(16, 50)
         dragSelectTouchHelper.attachToRecyclerView(binding.recyclerView)
         dragSelectTouchHelper.activeSlideSelect()
-        // Note: need judge selection first, so add ItemTouchHelper after it.
         val itemTouchCallback = ItemTouchCallback(adapter)
         itemTouchCallback.isCanDrag = true
         ItemTouchHelper(itemTouchCallback).attachToRecyclerView(binding.recyclerView)
+    }
+
+    private fun initSearchView() {
+        searchView.applyTint(primaryTextColor)
+        searchView.queryHint = getString(R.string.txt_toc_rule_search)
+        searchView.setOnQueryTextListener(this)
     }
 
     private fun initBottomActionBar() {
@@ -104,12 +119,30 @@ class TxtTocRuleActivity : VMBaseActivity<ActivityTxtTocRuleBinding, TxtTocRuleV
         binding.selectActionBar.setCallBack(this)
     }
 
-    private fun initData() {
-        lifecycleScope.launch {
-            appDb.txtTocRuleDao.observeAll().catch {
+    private fun initData(searchKey: String? = null) {
+        txtTocRuleFlowJob?.cancel()
+        txtTocRuleFlowJob = lifecycleScope.launch {
+            when {
+                searchKey.isNullOrEmpty() -> {
+                    appDb.txtTocRuleDao.observeAll()
+                }
+
+                searchKey == getString(R.string.enabled) -> {
+                    appDb.txtTocRuleDao.observeEnabled()
+                }
+
+                searchKey == getString(R.string.disabled) -> {
+                    appDb.txtTocRuleDao.observeDisabled()
+                }
+
+                else -> {
+                    appDb.txtTocRuleDao.observeSearch("%$searchKey%")
+                }
+            }.catch {
                 AppLog.put("TXT目录规则界面获取数据失败\n${it.localizedMessage}", it)
             }.flowOn(IO).conflate().collect { tocRules ->
                 adapter.setItems(tocRules, adapter.diffItemCallBack)
+                delay(100)
             }
         }
     }
@@ -199,6 +232,15 @@ class TxtTocRuleActivity : VMBaseActivity<ActivityTxtTocRuleBinding, TxtTocRuleV
     override fun upCountView() {
         binding.selectActionBar
             .upCountView(adapter.selection.size, adapter.itemCount)
+    }
+
+    override fun onQueryTextChange(newText: String?): Boolean {
+        initData(newText)
+        return false
+    }
+
+    override fun onQueryTextSubmit(query: String?): Boolean {
+        return false
     }
 
     private fun delSourceDialog() {

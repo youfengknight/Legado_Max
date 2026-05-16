@@ -1235,11 +1235,13 @@
     <string name="clear_webview_data_summary">Clear all data in WebView</string>
     <string name="source_tab_list">List</string>
     <string name="dict_rule">Dict rule</string>
+    <string name="dict_rule_search">Search Dict Rule</string>
     <string name="config_dict_rule">Config dict rule</string>
     <string name="create">Create</string>
     <string name="url_rule">url规则(urlRule)</string>
     <string name="show_rule">显示规则(showRule)</string>
     <string name="config_txt_toc_rule">Configure txt catalog rules</string>
+    <string name="txt_toc_rule_search">Search Txt Catalog Rule</string>
     <string name="import_dict_rule">Import dict rule</string>
     <string name="keep_group">Keep group</string>
     <string name="server_config">Server Configuration</string>
