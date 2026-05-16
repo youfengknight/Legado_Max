@@ -1,232 +1,209 @@
 package io.legado.app.ui.file
 
-import android.annotation.SuppressLint
+import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.view.View
-import android.view.ViewGroup
-import android.widget.PopupMenu
-import androidx.activity.addCallback
-import androidx.activity.viewModels
-import androidx.appcompat.widget.SearchView
-import androidx.core.content.FileProvider
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import io.legado.app.R
-import io.legado.app.base.VMBaseActivity
-import io.legado.app.base.adapter.ItemViewHolder
-import io.legado.app.base.adapter.RecyclerAdapter
-import io.legado.app.constant.AppConst
-import io.legado.app.databinding.ActivityFileManageBinding
-import io.legado.app.databinding.ItemFileBinding
-import io.legado.app.databinding.ItemPathPickerBinding
-import io.legado.app.lib.theme.primaryTextColor
-import io.legado.app.ui.file.utils.FilePickerIcon
-import io.legado.app.ui.widget.recycler.VerticalDivider
-import io.legado.app.utils.ConvertUtils
-import io.legado.app.utils.applyNavigationBarPadding
-import io.legado.app.utils.applyTint
-import io.legado.app.utils.openFileUri
-import io.legado.app.utils.viewbindingdelegate.viewBinding
-import java.io.File
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.drawable.toBitmap
+import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.AppConfig
+import io.legado.app.utils.ColorUtils
+import io.legado.app.utils.fullScreen
+import io.legado.app.utils.setNavigationBarColorAuto
+import io.legado.app.utils.setStatusBarColorAuto
+import io.legado.app.lib.theme.primaryColor
+import io.legado.app.lib.theme.ThemeStore
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 
-class FileManageActivity : VMBaseActivity<ActivityFileManageBinding, FileManageViewModel>() {
+class FileManageActivity : AppCompatActivity() {
 
-    override val binding by viewBinding(ActivityFileManageBinding::inflate)
-    override val viewModel by viewModels<FileManageViewModel>()
-    private val dirParent = ".."
-    private val searchView: SearchView by lazy {
-        binding.titleBar.findViewById(R.id.search_view)
-    }
-    private val pathAdapter by lazy {
-        PathAdapter()
-    }
-    private val fileAdapter by lazy {
-        FileAdapter()
-    }
-    private val currentFiles = arrayListOf<File>()
+    private var bgDrawable: Drawable? = null
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        initView()
-        initSearchView()
-        viewModel.upFiles(viewModel.rootDoc)
-    }
-
-    private fun initView() {
-        binding.rvPath.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
-        binding.rvPath.adapter = pathAdapter
-        binding.recyclerView.layoutManager = LinearLayoutManager(this)
-        binding.recyclerView.addItemDecoration(VerticalDivider(this))
-        binding.recyclerView.adapter = fileAdapter
-        binding.recyclerView.applyNavigationBarPadding()
-        onBackPressedDispatcher.addCallback(this) {
-            if (viewModel.lastDir != viewModel.rootDoc) {
-                gotoLastDir()
-                return@addCallback
-            }
-            finish()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        initTheme()
+        super.onCreate(savedInstanceState)
+        setupSystemBar()
+        loadBackgroundImage()
+        enableEdgeToEdge()
+        
+        setContent {
+            FileManageContent(
+                bgDrawable = bgDrawable,
+                onBackClick = { finish() }
+            )
         }
     }
 
-    private fun initSearchView() {
-        searchView.applyTint(primaryTextColor)
-        searchView.queryHint = getString(R.string.screen) + " • " + getString(R.string.file_manage)
-        searchView.isSubmitButtonEnabled = true
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                return false
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                updateFiles()
-                return false
-            }
-        })
-    }
-
-    private fun updateFiles() {
-        if (searchView.query.isNotEmpty()) {
-            currentFiles.filter {
-                it.name == dirParent || it.name.contains(searchView.query)
-            }.let {
-                fileAdapter.setItems(it)
-            }
-        } else {
-            fileAdapter.setItems(currentFiles)
-        }
-    }
-
-    private fun gotoLastDir() {
-        viewModel.subDocs.removeLastOrNull()
-        pathAdapter.setItems(viewModel.subDocs)
-        viewModel.upFiles(viewModel.lastDir)
-    }
-
-    override fun observeLiveBus() {
-        viewModel.filesLiveData.observe(this) {
-            searchView.setQuery("", false)
-            currentFiles.clear()
-            currentFiles.addAll(it)
-            updateFiles()
-        }
-    }
-
-    @SuppressLint("SetTextI18n")
-    inner class PathAdapter :
-        RecyclerAdapter<File, ItemPathPickerBinding>(this@FileManageActivity) {
-
-        private val arrowIcon = ConvertUtils.toDrawable(FilePickerIcon.getArrow())
-
-        init {
-            addHeaderView {
-                ItemPathPickerBinding.inflate(inflater, it, false).apply {
-                    textView.text = "root"
-                    imageView.setImageDrawable(arrowIcon)
-                    root.setOnClickListener {
-                        viewModel.subDocs.clear()
-                        setItems(viewModel.subDocs)
-                        viewModel.upFiles(viewModel.rootDoc)
-                    }
-                }
-            }
-        }
-
-        override fun getViewBinding(parent: ViewGroup): ItemPathPickerBinding {
-            return ItemPathPickerBinding.inflate(inflater, parent, false).apply {
-                imageView.setImageDrawable(arrowIcon)
-            }
-        }
-
-        override fun registerListener(holder: ItemViewHolder, binding: ItemPathPickerBinding) {
-            binding.root.setOnClickListener {
-                viewModel.subDocs = viewModel.subDocs.subList(0, holder.layoutPosition)
-                setItems(viewModel.subDocs)
-                viewModel.upFiles(viewModel.subDocs.lastOrNull())
-            }
-        }
-
-        override fun convert(
-            holder: ItemViewHolder,
-            binding: ItemPathPickerBinding,
-            item: File,
-            payloads: MutableList<Any>
-        ) {
-            binding.textView.text = item.name
-        }
-
-    }
-
-    inner class FileAdapter : RecyclerAdapter<File, ItemFileBinding>(this@FileManageActivity) {
-        private val upIcon = ConvertUtils.toDrawable(FilePickerIcon.getUpDir())!!
-        private val folderIcon = ConvertUtils.toDrawable(FilePickerIcon.getFolder())!!
-        private val fileIcon = ConvertUtils.toDrawable(FilePickerIcon.getFile())!!
-
-        override fun getViewBinding(parent: ViewGroup): ItemFileBinding {
-            return ItemFileBinding.inflate(inflater, parent, false)
-        }
-
-        override fun registerListener(holder: ItemViewHolder, binding: ItemFileBinding) {
-            binding.root.setOnClickListener {
-                val item = getItemByLayoutPosition(holder.layoutPosition)
-                item?.let {
-                    if (item == viewModel.lastDir) {
-                        gotoLastDir()
-                    } else if (item.isDirectory) {
-                        viewModel.subDocs.add(item)
-                        pathAdapter.setItems(viewModel.subDocs)
-                        viewModel.upFiles(item)
-                    } else {
-                        openFileUri(
-                            FileProvider.getUriForFile(
-                                this@FileManageActivity,
-                                AppConst.authority,
-                                item
-                            )
-                        )
-                    }
-                }
-            }
-            binding.root.setOnLongClickListener { view ->
-                val item = getItemByLayoutPosition(holder.layoutPosition)
-                if (item == viewModel.lastDir) {
-                    return@setOnLongClickListener true
-                }
-                item?.let {
-                    showFileMenu(view, item)
-                }
-                return@setOnLongClickListener true
-            }
-        }
-
-        override fun convert(
-            holder: ItemViewHolder,
-            binding: ItemFileBinding,
-            item: File,
-            payloads: MutableList<Any>
-        ) {
-            if (item == viewModel.lastDir) {
-                binding.imageView.setImageDrawable(upIcon)
-                binding.textView.text = dirParent
-            } else if (item.isDirectory) {
-                binding.imageView.setImageDrawable(folderIcon)
-                binding.textView.text = item.name
+    @Suppress("DEPRECATION")
+    private fun loadBackgroundImage() {
+        try {
+            val metrics = android.util.DisplayMetrics()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                val windowMetrics = windowManager.currentWindowMetrics
+                val bounds = windowMetrics.bounds
+                metrics.widthPixels = bounds.width()
+                metrics.heightPixels = bounds.height()
             } else {
-                binding.imageView.setImageDrawable(fileIcon)
-                binding.textView.text = item.name
+                windowManager.defaultDisplay.getMetrics(metrics)
             }
+            bgDrawable = ThemeConfig.getBgImage(this, metrics)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-
-        private fun showFileMenu(view: View, file: File) {
-            val popupMenu = PopupMenu(context, view)
-            popupMenu.inflate(R.menu.file_long_click)
-            popupMenu.setOnMenuItemClickListener {
-                when (it.itemId) {
-                    R.id.menu_del -> viewModel.delFile(file)
-                }
-                true
-            }
-            popupMenu.show()
-        }
-
     }
 
+    private fun initTheme() {
+        val theme = ThemeConfig.getTheme()
+        when (theme) {
+            io.legado.app.constant.Theme.Dark -> {
+                setTheme(io.legado.app.R.style.AppTheme_Dark)
+            }
+            io.legado.app.constant.Theme.Light -> {
+                setTheme(io.legado.app.R.style.AppTheme_Light)
+            }
+            else -> {
+                if (ColorUtils.isColorLight(primaryColor)) {
+                    setTheme(io.legado.app.R.style.AppTheme_Light)
+                } else {
+                    setTheme(io.legado.app.R.style.AppTheme_Dark)
+                }
+            }
+        }
+    }
+
+    private fun setupSystemBar() {
+        fullScreen()
+        val isTransparentStatusBar = AppConfig.isTransparentStatusBar
+        val statusBarColor = ThemeStore.statusBarColor(this, isTransparentStatusBar)
+        setStatusBarColorAuto(statusBarColor, isTransparentStatusBar, true)
+        if (AppConfig.immNavigationBar) {
+            setNavigationBarColorAuto(ThemeStore.navigationBarColor(this))
+        } else {
+            val nbColor = ColorUtils.darkenColor(ThemeStore.navigationBarColor(this))
+            setNavigationBarColorAuto(nbColor)
+        }
+    }
+}
+
+@Composable
+fun FileManageContent(
+    bgDrawable: Drawable?,
+    onBackClick: () -> Unit
+) {
+    val context = LocalContext.current
+
+    val isNightTheme = AppConfig.isNightTheme
+    val primaryColor = ThemeStore.primaryColor(context)
+    val accentColor = ThemeStore.accentColor(context)
+    val bgColor = ThemeStore.backgroundColor(context)
+    val textPrimaryColor = ThemeStore.textColorPrimary(context)
+    val textSecondaryColor = ThemeStore.textColorSecondary(context)
+
+    val isLight = !isNightTheme && ColorUtils.isColorLight(bgColor)
+    val background = Color(bgColor)
+    val primary = Color(accentColor)
+    val secondary = Color(primaryColor)
+    val onBackground = Color(textPrimaryColor)
+    val onBackgroundVariant = Color(textSecondaryColor)
+
+    val surface = lerp(background, if (isLight) Color.White else Color.Black, if (isLight) 0.04f else 0.10f)
+    val surfaceVariant = lerp(background, onBackground, if (isLight) 0.05f else 0.14f)
+    val outline = lerp(background, onBackground, if (isLight) 0.12f else 0.24f)
+    val onSurfaceVariant = lerp(onBackground, if (isLight) Color.Black else Color.White, if (isLight) 0.2f else 0.2f)
+
+    val colorScheme = if (isLight) {
+        lightColorScheme(
+            primary = primary,
+            secondary = secondary,
+            tertiary = secondary,
+            background = background,
+            surface = surface,
+            surfaceVariant = surfaceVariant,
+            secondaryContainer = surfaceVariant,
+            tertiaryContainer = surfaceVariant,
+            outline = outline,
+            outlineVariant = outline.copy(alpha = 0.75f),
+            onPrimary = if (ColorUtils.isColorLight(accentColor)) Color.Black else Color.White,
+            onSecondary = if (ColorUtils.isColorLight(primaryColor)) Color.Black else Color.White,
+            onBackground = onBackground,
+            onSurface = onBackground,
+            onSurfaceVariant = onSurfaceVariant,
+            error = Color(0xFFE53935),
+            onError = Color.White
+        )
+    } else {
+        darkColorScheme(
+            primary = primary,
+            secondary = secondary,
+            tertiary = secondary,
+            background = background,
+            surface = surface,
+            surfaceVariant = surfaceVariant,
+            secondaryContainer = surfaceVariant,
+            tertiaryContainer = surfaceVariant,
+            outline = outline,
+            outlineVariant = outline.copy(alpha = 0.8f),
+            onPrimary = if (ColorUtils.isColorLight(accentColor)) Color.Black else Color.White,
+            onSecondary = if (ColorUtils.isColorLight(primaryColor)) Color.Black else Color.White,
+            onBackground = onBackground,
+            onSurface = onBackground,
+            onSurfaceVariant = onSurfaceVariant,
+            error = Color(0xFFFF5252),
+            onError = Color.Black
+        )
+    }
+
+    MaterialTheme(colorScheme = colorScheme) {
+        FileManageBoxWithBackground(
+            bgDrawable = bgDrawable,
+            bgColor = background
+        ) {
+            FileManageScreen(onBackClick = onBackClick)
+        }
+    }
+}
+
+@Composable
+fun FileManageBoxWithBackground(
+    bgDrawable: Drawable?,
+    bgColor: Color,
+    content: @Composable () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (bgDrawable != null) {
+            val overlayAlpha = if (bgColor.luminance() > 0.5f) 0.22f else 0.40f
+            Image(
+                bitmap = bgDrawable.toBitmap().asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(bgColor.copy(alpha = overlayAlpha))
+            )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize().background(bgColor)
+            )
+        }
+
+        content()
+    }
 }
