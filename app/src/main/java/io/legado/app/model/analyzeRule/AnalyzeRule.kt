@@ -424,6 +424,9 @@ class AnalyzeRule(
      */
     fun getElement(ruleStr: String): Any? {
         if (TextUtils.isEmpty(ruleStr)) return null
+        val startTime = System.currentTimeMillis()
+        val tracker = io.legado.app.model.debug.RuleExecutionTracker(source, ruleStr)
+        
         var result: Any? = null
         val content = this.content
         val ruleList = splitSourceRule(ruleStr, true)
@@ -434,6 +437,17 @@ class AnalyzeRule(
                 sourceRule.makeUpRule(result)
                 result ?: continue
                 val rule = sourceRule.rule
+                val ruleType = when (sourceRule.mode) {
+                    Mode.Regex -> io.legado.app.model.debug.RuleType.REGEX
+                    Mode.WebJs -> io.legado.app.model.debug.RuleType.WEB_JS
+                    Mode.Js -> io.legado.app.model.debug.RuleType.JS
+                    Mode.Json -> io.legado.app.model.debug.RuleType.JSONPATH
+                    Mode.XPath -> io.legado.app.model.debug.RuleType.XPATH
+                    else -> io.legado.app.model.debug.RuleType.CSS
+                }
+                
+                tracker.startStep(ruleType, rule, result)
+                
                 result = when (sourceRule.mode) {
                     Mode.Regex -> AnalyzeByRegex.getElement(
                         result.toString(),
@@ -446,11 +460,26 @@ class AnalyzeRule(
                     Mode.XPath -> getAnalyzeByXPath(result).getElements(rule)
                     else -> getAnalyzeByJSoup(result).getElements(rule)
                 }
+                
+                tracker.endStep(result)
+                
                 if (sourceRule.replaceRegex.isNotEmpty()) {
+                    tracker.startStep(io.legado.app.model.debug.RuleType.REPLACE, "${sourceRule.replaceRegex} -> ${sourceRule.replacement}", result)
                     result = replaceRegex(result.toString(), sourceRule)
+                    tracker.endStep(result)
                 }
             }
         }
+        
+        if (tracker.hasSteps()) {
+            val tree = tracker.buildTree()
+            FlowLogRecorder.logRuleExecution(
+                source = source,
+                executionTree = tree,
+                message = "获取Element完成"
+            )
+        }
+        
         return result
     }
 
@@ -459,6 +488,9 @@ class AnalyzeRule(
      */
     @Suppress("UNCHECKED_CAST")
     fun getElements(ruleStr: String): List<Any> {
+        val startTime = System.currentTimeMillis()
+        val tracker = io.legado.app.model.debug.RuleExecutionTracker(source, ruleStr)
+        
         var result: Any? = null
         val content = this.content
         val ruleList = splitSourceRule(ruleStr, true)
@@ -468,6 +500,17 @@ class AnalyzeRule(
                 putRule(sourceRule.putMap)
                 result ?: continue
                 val rule = sourceRule.rule
+                val ruleType = when (sourceRule.mode) {
+                    Mode.Regex -> io.legado.app.model.debug.RuleType.REGEX
+                    Mode.WebJs -> io.legado.app.model.debug.RuleType.WEB_JS
+                    Mode.Js -> io.legado.app.model.debug.RuleType.JS
+                    Mode.Json -> io.legado.app.model.debug.RuleType.JSONPATH
+                    Mode.XPath -> io.legado.app.model.debug.RuleType.XPATH
+                    else -> io.legado.app.model.debug.RuleType.CSS
+                }
+                
+                tracker.startStep(ruleType, rule, result)
+                
                 result = when (sourceRule.mode) {
                     Mode.Regex -> AnalyzeByRegex.getElements(
                         result.toString(),
@@ -480,12 +523,24 @@ class AnalyzeRule(
                     Mode.XPath -> getAnalyzeByXPath(result).getElements(rule)
                     else -> getAnalyzeByJSoup(result).getElements(rule)
                 }
+                
+                val matchCount = (result as? List<*>)?.size
+                tracker.endStep(result, matchCount = matchCount)
             }
         }
-        result?.let {
-            return it as List<Any>
+        
+        val resultList = result?.let { it as List<Any> } ?: ArrayList()
+        
+        if (tracker.hasSteps()) {
+            val tree = tracker.buildTree()
+            FlowLogRecorder.logRuleExecution(
+                source = source,
+                executionTree = tree,
+                message = "获取列表完成，共${resultList.size}个元素"
+            )
         }
-        return ArrayList()
+        
+        return resultList
     }
 
     /**
