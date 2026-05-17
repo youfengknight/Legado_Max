@@ -15,6 +15,8 @@ import io.legado.app.help.storage.CacheDetail
 import io.legado.app.help.storage.StorageCalculator
 import io.legado.app.utils.ConvertUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,34 +79,46 @@ class StorageManageViewModel(application: Application) : BaseViewModel(applicati
         loadCacheInfo()
     }
 
+    /**
+     * 加载所有缓存信息
+     * 使用async并行计算各类缓存大小，显著提升加载速度
+     * 原来串行执行需要等待每个计算完成，现在所有计算同时进行
+     */
     fun loadCacheInfo() {
         execute {
             _uiState.value = StorageUiState.Loading
             try {
+                // 并行启动所有缓存计算任务
+                val bookCacheDeferred = async(Dispatchers.IO) { StorageCalculator.calculateBookCacheSize() }
+                val bookCountDeferred = async(Dispatchers.IO) { StorageCalculator.countCachedBooks() }
+                val epubCacheDeferred = async(Dispatchers.IO) { StorageCalculator.calculateEpubCacheSize() }
+                val tempCacheDeferred = async(Dispatchers.IO) { StorageCalculator.calculateTempCacheSize() }
+                val ttsCacheDeferred = async(Dispatchers.IO) { StorageCalculator.calculateTtsCacheSize() }
+                val ttsCountDeferred = async(Dispatchers.IO) { StorageCalculator.countTtsEngines() }
+                val aCacheDeferred = async(Dispatchers.IO) { StorageCalculator.calculateACacheSize() }
+                val aCacheCountDeferred = async(Dispatchers.IO) { StorageCalculator.countACacheItems() }
+                val dbCacheDeferred = async(Dispatchers.IO) { StorageCalculator.calculateDbCacheSize() }
+                val logCacheDeferred = async(Dispatchers.IO) { StorageCalculator.calculateLogCacheSize() }
+                
+                // 等待所有并行任务完成
+                val bookSize = bookCacheDeferred.await()
+                val bookCount = bookCountDeferred.await()
+                val epubSize = epubCacheDeferred.await()
+                val tempSize = tempCacheDeferred.await()
+                val ttsSize = ttsCacheDeferred.await()
+                val ttsCount = ttsCountDeferred.await()
+                val aCacheSize = aCacheDeferred.await()
+                val aCacheCount = aCacheCountDeferred.await()
+                val dbSize = dbCacheDeferred.await()
+                val logSize = logCacheDeferred.await()
+                
                 val items = mutableListOf<CacheItem>()
-                
-                val bookSize = StorageCalculator.calculateBookCacheSize()
-                val bookCount = StorageCalculator.countCachedBooks()
                 items.add(createCacheItem(CacheType.BOOK_CACHE, bookSize, true, "${bookCount}本"))
-                
-                val epubSize = StorageCalculator.calculateEpubCacheSize()
                 items.add(createCacheItem(CacheType.EPUB_CACHE, epubSize, false, null))
-                
-                val tempSize = StorageCalculator.calculateTempCacheSize()
                 items.add(createCacheItem(CacheType.TEMP_CACHE, tempSize, false, null))
-                
-                val ttsSize = StorageCalculator.calculateTtsCacheSize()
-                val ttsCount = StorageCalculator.countTtsEngines()
                 items.add(createCacheItem(CacheType.TTS_CACHE, ttsSize, true, "${ttsCount}个引擎"))
-                
-                val aCacheSize = StorageCalculator.calculateACacheSize()
-                val aCacheCount = StorageCalculator.countACacheItems()
                 items.add(createCacheItem(CacheType.ACACHE_DISK, aCacheSize, true, "${aCacheCount}项"))
-                
-                val dbSize = StorageCalculator.calculateDbCacheSize()
                 items.add(createCacheItem(CacheType.DB_CACHE, dbSize, true, "legado.db"))
-                
-                val logSize = StorageCalculator.calculateLogCacheSize()
                 items.add(createCacheItem(CacheType.LOG_CACHE, logSize, false, null))
                 
                 _cacheItems.value = items

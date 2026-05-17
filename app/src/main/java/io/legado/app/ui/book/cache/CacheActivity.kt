@@ -350,7 +350,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
                 yesButton {
                     lifecycleScope.launch(IO) {
                         BookHelp.clearCache(book)
-                        viewModel.cacheChapters[book.bookUrl] = hashSetOf()
+                        viewModel.clearCache(book.bookUrl)
                         withContext(Main) {
                             notifyItemChanged(book.bookUrl)
                         }
@@ -367,12 +367,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
             yesButton {
                 lifecycleScope.launch(IO) {
                     BookHelp.clearCache()
-                    viewModel.cacheChapters.clear()
-                    adapter.getItems().forEach { book ->
-                        if (!book.isLocal) {
-                            viewModel.cacheChapters[book.bookUrl] = hashSetOf()
-                        }
-                    }
+                    viewModel.clearAllCache()
                     withContext(Main) {
                         adapter.notifyDataSetChanged()
                     }
