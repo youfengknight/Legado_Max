@@ -5,6 +5,7 @@ package io.legado.app.ui.main
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.ViewGroup
 import androidx.activity.addCallback
 import androidx.activity.viewModels
@@ -53,7 +54,19 @@ import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import io.legado.app.utils.invisible
+import io.legado.app.utils.visible
+import io.legado.app.utils.startActivity
+import io.legado.app.help.glide.ImageLoader
+import android.animation.ObjectAnimator
+import android.view.animation.LinearInterpolator
+import android.graphics.drawable.GradientDrawable
+import androidx.core.graphics.ColorUtils as AndroidXColorUtils
+import io.legado.app.utils.ColorUtils
+import android.graphics.Bitmap
+import android.graphics.Color
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -63,6 +76,8 @@ import androidx.core.view.get
 import io.legado.app.help.update.AppUpdate
 import io.legado.app.ui.about.UpdateDialog
 import kotlin.time.Duration.Companion.hours
+import io.legado.app.model.ReadAloud
+import io.legado.app.model.ReadBook
 
 /**
  * 主界面
@@ -93,6 +108,12 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         TabFragmentPageAdapter(supportFragmentManager)
     }
     private var onUpBooksBadgeView: BadgeView? = null
+    private var miniCoverAnimator: ObjectAnimator? = null
+    private var miniBarVisible = false
+    private var miniBarThemeInitialized = false
+    private var miniBarDownX = 0f
+    private var miniBarDownY = 0f
+    private var miniBarDragging = false
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         upBottomMenu()
@@ -123,6 +144,7 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
+        upReadAloudMiniBar()
         lifecycleScope.launch {
             //隐私协议
             if (!privacyPolicy()) return@launch
@@ -204,7 +226,168 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             view.bottomPadding = height
             windowInsets.inset(0, 0, 0, height)
         }
+        initReadAloudMiniBar()
     }
+
+    private fun initReadAloudMiniBar() = binding.run {
+        readAloudMiniBar.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    miniBarDownX = event.rawX
+                    miniBarDownY = event.rawY
+                    miniBarDragging = false
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - miniBarDownX
+                    val dy = event.rawY - miniBarDownY
+                    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                        miniBarDragging = true
+                    }
+                    if (miniBarDragging) {
+                        v.translationX += dx
+                        v.translationY += dy
+                        miniBarDownX = event.rawX
+                        miniBarDownY = event.rawY
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (!miniBarDragging) {
+                        ReadBook.book?.let { book ->
+                            startActivity<io.legado.app.ui.book.read.ReadBookActivity> {
+                                putExtra("bookUrl", book.bookUrl)
+                            }
+                        }
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+        ivReadAloudMiniPlay.setOnClickListener {
+            if (BaseReadAloudService.pause) ReadAloud.resume(this@MainActivity)
+            else ReadAloud.pause(this@MainActivity)
+        }
+        ivReadAloudMiniClose.setOnClickListener {
+            ReadAloud.stop(this@MainActivity)
+            readAloudMiniBar.invisible()
+        }
+    }
+
+    private fun upReadAloudMiniBar() = binding.run {
+        if (!BaseReadAloudService.isRun) {
+            readAloudMiniBar.invisible()
+            stopMiniCoverAnimation(reset = true)
+            miniBarVisible = false
+            miniBarThemeInitialized = false
+            return@run
+        }
+        ivReadAloudMiniPlay.setImageResource(
+            if (BaseReadAloudService.pause) R.drawable.ic_play_24dp else R.drawable.ic_pause_24dp
+        )
+        readAloudMiniBar.visible()
+        if (!miniBarVisible) {
+            miniBarVisible = true
+            readAloudMiniBar.alpha = 0f
+            readAloudMiniBar.translationY = 12f.dpToPx()
+            readAloudMiniBar.animate().alpha(1f).translationY(0f).setDuration(180L).start()
+        }
+        if (BaseReadAloudService.pause) {
+            stopMiniCoverAnimation()
+        } else {
+            startMiniCoverAnimation()
+        }
+        if (miniBarThemeInitialized) return@run
+        miniBarThemeInitialized = true
+        applyMiniBarTheme(0xFF665185.toInt())
+        ReadBook.book?.let { book ->
+            ImageLoader.load(this@MainActivity, book.getDisplayCover())
+                .circleCrop()
+                .into(ivReadAloudMiniCover)
+            lifecycleScope.launch(IO) {
+                val bitmap = runCatching {
+                    ImageLoader.loadBitmap(this@MainActivity, book.getDisplayCover()).submit().get()
+                }.getOrNull()
+                bitmap?.let {
+                    val dominant = extractDominantColor(it)
+                    withContext(Main) {
+                        applyMiniBarTheme(dominant)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun applyMiniBarTheme(color: Int) = binding.run {
+        val bubble = AndroidXColorUtils.blendARGB(color, 0xFF79658C.toInt(), 0.42f)
+        val textColor = if (ColorUtils.isColorLight(bubble)) 0xFF1A1422.toInt() else 0xFFFFFFFF.toInt()
+        val softColor = AndroidXColorUtils.setAlphaComponent(textColor, 72)
+        readAloudMiniBar.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 30f.dpToPx()
+            setColor(AndroidXColorUtils.setAlphaComponent(bubble, 236))
+        }
+        readAloudMiniCoverShell.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(AndroidXColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), 18))
+            setStroke(1.dpToPx(), AndroidXColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), 58))
+        }
+        ivReadAloudMiniPlay.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(AndroidXColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), 8))
+            setStroke(2.dpToPx(), AndroidXColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), 84))
+        }
+        ivReadAloudMiniClose.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(AndroidXColorUtils.setAlphaComponent(0xFFFFFFFF.toInt(), 6))
+        }
+        ivReadAloudMiniPlay.setColorFilter(textColor)
+        ivReadAloudMiniClose.setColorFilter(softColor)
+    }
+
+    private fun startMiniCoverAnimation() {
+        if (miniCoverAnimator == null) {
+            miniCoverAnimator = ObjectAnimator.ofFloat(binding.ivReadAloudMiniCover, android.view.View.ROTATION, 0f, 360f).apply {
+                duration = 9000L
+                repeatCount = ObjectAnimator.INFINITE
+                interpolator = LinearInterpolator()
+            }
+        }
+        if (miniCoverAnimator?.isRunning != true) {
+            miniCoverAnimator?.start()
+        }
+    }
+
+    private fun stopMiniCoverAnimation(reset: Boolean = false) {
+        miniCoverAnimator?.pause()
+        if (reset) {
+            miniCoverAnimator?.cancel()
+            miniCoverAnimator = null
+        }
+    }
+
+    private fun extractDominantColor(bitmap: Bitmap): Int {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        var r = 0
+        var g = 0
+        var b = 0
+        var count = 0
+        for (pixel in pixels) {
+            if (Color.alpha(pixel) < 128) continue
+            r += Color.red(pixel)
+            g += Color.green(pixel)
+            b += Color.blue(pixel)
+            count++
+        }
+        return if (count > 0) Color.rgb(r / count, g / count, b / count) else 0xFF665185.toInt()
+    }
+
+    private fun Float.dpToPx(): Float = this * resources.displayMetrics.density
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
     /**
      * 用户隐私与协议
@@ -380,6 +563,9 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         }
         observeEvent<String>(PreferKey.threadCount) {
             viewModel.upPool()
+        }
+        observeEvent<Int>(EventBus.ALOUD_STATE) {
+            upReadAloudMiniBar()
         }
     }
 

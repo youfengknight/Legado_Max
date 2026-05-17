@@ -1,26 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <androidx.viewpager.widget.ViewPager
-        android:id="@+id/view_pager_main"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        tools:ignore="SpeakableTextPresentCheck" />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <io.legado.app.lib.theme.view.ThemeBottomNavigationVIew
-        android:id="@+id/bottom_navigation_view"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/background"
-        android:minHeight="50dp"
-        app:itemActiveIndicatorStyle="@color/transparent"
-        app:labelVisibilityMode="unlabeled"
-        app:menu="@menu/main_bnv" />
+        <androidx.viewpager.widget.ViewPager
+            android:id="@+id/view_pager_main"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            tools:ignore="SpeakableTextPresentCheck" />
 
-</LinearLayout>
+        <io.legado.app.lib.theme.view.ThemeBottomNavigationVIew
+            android:id="@+id/bottom_navigation_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/background"
+            android:minHeight="50dp"
+            app:itemActiveIndicatorStyle="@color/transparent"
+            app:labelVisibilityMode="unlabeled"
+            app:menu="@menu/main_bnv" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/read_aloud_mini_bar"
+        android:layout_width="148dp"
+        android:layout_height="52dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="18dp"
+        android:layout_marginBottom="76dp"
+        android:elevation="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="7dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="5dp"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:id="@+id/read_aloud_mini_cover_shell"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:padding="2dp">
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/iv_read_aloud_mini_cover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/img_cover"
+                android:scaleType="centerCrop" />
+
+        </FrameLayout>
+
+        <io.legado.app.ui.widget.image.ImageButton
+            android:id="@+id/iv_read_aloud_mini_play"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="7dp"
+            android:contentDescription="@string/audio_play"
+            android:padding="9dp"
+            android:src="@drawable/ic_play_24dp" />
+
+        <io.legado.app.ui.widget.image.ImageButton
+            android:id="@+id/iv_read_aloud_mini_close"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="5dp"
+            android:contentDescription="@string/stop"
+            android:padding="7dp"
+            android:src="@drawable/ic_clear" />
+
+        <TextView
+            android:id="@+id/tv_read_aloud_mini_title"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            tools:text="hidden" />
+
+    </LinearLayout>
+
+</FrameLayout>
