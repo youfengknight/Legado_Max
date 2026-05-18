@@ -94,23 +94,72 @@ class BatteryView @JvmOverloads constructor(
             .toInt() + 2.dpToPx()
         val batteryEnd = batteryStart +
                 StaticLayout.getDesiredWidth(battery.toString(), paint).toInt() + 4.dpToPx()
+        
+        val top = 3.dpToPx()
+        val bottom = height - 3.dpToPx()
+        val bodyHeight = bottom - top
+        val cornerRadius = 2.dpToPx().toFloat()
+        
         outFrame.set(
             batteryStart,
-            2.dpToPx(),
+            top,
             batteryEnd,
-            height - 2.dpToPx()
+            bottom
         )
-        val dj = (outFrame.bottom - outFrame.top) / 3
+        
+        val polarHeight = bodyHeight * 0.4f
+        val polarTop = top + (bodyHeight - polarHeight) / 2
         polar.set(
             batteryEnd,
-            outFrame.top + dj,
+            polarTop.toInt(),
             batteryEnd + 2.dpToPx(),
-            outFrame.bottom - dj
+            (polarTop + polarHeight).toInt()
         )
-        batteryPaint.style = Paint.Style.STROKE
-        canvas.drawRect(outFrame, batteryPaint)
+        
         batteryPaint.style = Paint.Style.FILL
-        canvas.drawRect(polar, batteryPaint)
+        val polarRadius = 1.dpToPx().toFloat()
+        canvas.drawRoundRect(
+            polar.left.toFloat(),
+            polar.top.toFloat(),
+            polar.right.toFloat(),
+            polar.bottom.toFloat(),
+            polarRadius,
+            polarRadius,
+            batteryPaint
+        )
+        
+        batteryPaint.style = Paint.Style.STROKE
+        canvas.drawRoundRect(
+            outFrame.left.toFloat(),
+            outFrame.top.toFloat(),
+            outFrame.right.toFloat(),
+            outFrame.bottom.toFloat(),
+            cornerRadius,
+            cornerRadius,
+            batteryPaint
+        )
+        
+        if (battery > 0) {
+            val padding = 2.dpToPx()
+            val fillWidth = (outFrame.width() - padding * 2) * (battery.coerceIn(0, 100) / 100f)
+            if (fillWidth > 0) {
+                batteryPaint.style = Paint.Style.FILL
+                val fillLeft = outFrame.left + padding
+                val fillTop = outFrame.top + padding
+                val fillRight = fillLeft + fillWidth
+                val fillBottom = outFrame.bottom - padding
+                val fillRadius = 1.dpToPx().toFloat()
+                canvas.drawRoundRect(
+                    fillLeft.toFloat(),
+                    fillTop.toFloat(),
+                    fillRight.toFloat(),
+                    fillBottom.toFloat(),
+                    fillRadius,
+                    fillRadius,
+                    batteryPaint
+                )
+            }
+        }
     }
 
     @Suppress("UNNECESSARY_SAFE_CALL")
