@@ -408,9 +408,19 @@ class ReadBookActivity : BaseReadBookActivity(),
         val ttsProgress = BaseReadAloudService.lastTtsProgress
         if (ttsProgress <= 0) return
         if (ttsChapterIndex != ReadBook.durChapterIndex) {
-            if (allowChapterMismatch) upContent()
+            if (ttsChapterIndex >= 0) {
+                ReadBook.openChapter(ttsChapterIndex, ttsProgress, upContent = true) {
+                    applyReadAloudProgress(ttsProgress)
+                }
+            } else if (allowChapterMismatch) {
+                upContent()
+            }
             return
         }
+        applyReadAloudProgress(ttsProgress)
+    }
+
+    private fun applyReadAloudProgress(ttsProgress: Int) {
         ReadBook.curTextChapter?.let { textChapter ->
             if (!textChapter.isCompleted) return
             ReadBook.durChapterPos = ttsProgress

@@ -437,7 +437,6 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y jq curl 
           API_BASE="https://gitee.com/api/v5/repos/$GITEE_USER/$GITEE_REPO"
-          AUTH_HEADER="Authorization: token $GITEE_TOKEN"
 
           # 根据条件设置标签和发布类型
           if [ "$UPDATE_UPDATED" = "yes" ]; then
@@ -459,26 +458,25 @@ jobs:
           RETRY_COUNT=0
           RELEASE_ID=""
           RELEASE_JSON=""
+          BODY_ESCAPED=$(echo "$UPDATE_CONTENT" | jq -Rs .)
           PAYLOAD=$(jq -n \
             --arg tag_name "$TAG_NAME" \
             --arg name "$RELEASE_NAME" \
-            --arg body "$UPDATE_CONTENT" \
             --arg target_commitish "main" \
             --argjson prerelease "$PRERELEASE" \
-            '{
-              tag_name: $tag_name,
-              name: $name,
-              body: $body,
-              target_commitish: $target_commitish,
-              prerelease: $prerelease
-            }')
+            "{
+              tag_name: \$tag_name,
+              name: \$name,
+              body: ${BODY_ESCAPED},
+              target_commitish: \$target_commitish,
+              prerelease: \$prerelease
+            }")
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$RELEASE_ID" ]; do
             set +e
             RELEASE_JSON=$(curl -sS --fail --tlsv1.2 --retry 3 --retry-delay 5 --retry-connrefused --connect-timeout 20 -X POST \
                 -H "Content-Type: application/json" \
-                -H "$AUTH_HEADER" \
                 -d "$PAYLOAD" \
-                "$API_BASE/releases")
+                "${API_BASE}/releases?access_token=${GITEE_TOKEN}")
             CURL_EXIT=$?
             set -e
 
@@ -503,9 +501,8 @@ jobs:
           for APK_FILE in apk/*.apk; do
             set +e
             curl -sS --fail --tlsv1.2 --retry 2 --retry-delay 3 --connect-timeout 30 --max-time 6000 -X POST \
-              -H "$AUTH_HEADER" \
               -F "file=@$APK_FILE" \
-              "$API_BASE/releases/$RELEASE_ID/attach_files" &
+              "${API_BASE}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}" &
             PIDS+=($!)
             set -e
           done

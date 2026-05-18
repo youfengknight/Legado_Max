@@ -42,7 +42,7 @@ class BatteryView @JvmOverloads constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             isFallbackLineSpacing = false
         }
-        batteryPaint.strokeWidth = 1f.dpToPx()
+        batteryPaint.strokeWidth = 2f.dpToPx()
         batteryPaint.isAntiAlias = true
         batteryPaint.color = paint.color
     }
@@ -91,12 +91,14 @@ class BatteryView @JvmOverloads constructor(
         layout.getLineBounds(0, outFrame)
         val batteryStart = layout
             .getPrimaryHorizontal(text.length - battery.toString().length)
-            .toInt() + 2.dpToPx()
-        val batteryEnd = batteryStart +
-                StaticLayout.getDesiredWidth(battery.toString(), paint).toInt() + 4.dpToPx()
+            .toInt() + 1.dpToPx()
+        val actualWidth = StaticLayout.getDesiredWidth(battery.toString(), paint).toInt()
+        val maxWidth = StaticLayout.getDesiredWidth("00", paint).toInt()
+        val batteryWidth = minOf(actualWidth, maxWidth)
+        val batteryEnd = batteryStart + batteryWidth + 6.dpToPx()
         
-        val top = 3.dpToPx()
-        val bottom = height - 3.dpToPx()
+        val top = 2.dpToPx()
+        val bottom = height - 2.dpToPx()
         val bodyHeight = bottom - top
         val cornerRadius = 2.dpToPx().toFloat()
         
