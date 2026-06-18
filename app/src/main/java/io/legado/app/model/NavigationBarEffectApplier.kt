@@ -86,7 +86,15 @@ object NavigationBarEffectApplier {
         val viewPager = binding.viewPagerMain
 
         // 移除 glass/overlay
-        rootView.findViewWithTag<LiquidGlassView>(TAG_GLASS_VIEW)?.let { rootView.removeView(it) }
+        // 先将 LiquidGlassView 设为 GONE 并递归清除所有子 View 的 Handler 回调，
+        // 防止 removeView 后内部 post() 投递的 Runnable 在 glass/impl 被
+        // 置 null 后执行导致 NPE（LiquidGlassView 内部的 LiquidGlass 子 View
+        // 通过 host.post() 投递的回调不会被 removeView 自动取消）
+        rootView.findViewWithTag<LiquidGlassView>(TAG_GLASS_VIEW)?.let { glassView ->
+            glassView.visibility = View.GONE
+            removeAllCallbacks(glassView)
+            rootView.removeView(glassView)
+        }
         rootView.findViewWithTag<View>(TAG_OVERLAY)?.let { rootView.removeView(it) }
 
         // 恢复 ThemeBottomNavigationVIew 默认样式
@@ -189,7 +197,11 @@ object NavigationBarEffectApplier {
 
         if (useFallback) {
             // 降级：移除 glass，只用 overlay
-            glassView?.let { rootView.removeView(it) }
+            glassView?.let {
+                it.visibility = View.GONE
+                removeAllCallbacks(it)
+                rootView.removeView(it)
+            }
             glassView = null
 
             if (overlay == null) {
@@ -427,6 +439,24 @@ object NavigationBarEffectApplier {
         // 重新触发 MainActivity.upNavigationBarColor() 来设置正确的颜色
         if (activity is io.legado.app.ui.main.MainActivity) {
             activity.upNavigationBarColor()
+        }
+    }
+
+    /**
+     * 递归清除 View 及其所有子 View 的 Handler 待执行回调
+     *
+     * LiquidGlassView 内部包含 LiquidGlass 子 View，LiquidGlass 的构造函数和
+     * updateParameters() 都通过 host.post() 投递 Runnable。当 LiquidGlassView
+     * 被从视图树移除时，onDetachedFromWindow 会将 glass 置 null，但已投递的
+     * Runnable 仍在消息队列中，执行时访问已为 null 的引用导致 NPE。
+     * 通过在 removeView 前递归清除所有子 View 的回调来避免此问题。
+     */
+    private fun removeAllCallbacks(view: View) {
+        view.removeCallbacks(null)
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                removeAllCallbacks(view.getChildAt(i))
+            }
         }
     }
 }
