@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - beta
+      - Suml-1  # 新增：Suml-1 分支推送触发构建
     paths:
       - '**'
       # - '!**/assets/**'
@@ -270,7 +271,8 @@ jobs:
 
   prerelease:
     needs: [ prepare, build ]
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    # 新增：Suml-1 分支也允许执行发布
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta' || github.ref == 'refs/heads/Suml-1')
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
@@ -435,6 +437,7 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
           UPDATE_CONTENT: ${{ fromJSON(needs.prepare.outputs.updateLog_content) }}
           UPDATE_UPDATED: ${{ needs.prepare.outputs.updateLog_updated }}
+          CURRENT_BRANCH: ${{ github.ref_name }}  # 新增：动态获取当前分支名
         run: |
           sudo apt-get update && sudo apt-get install -y jq curl 
           API_BASE="https://gitee.com/api/v5/repos/$GITEE_USER/$GITEE_REPO"
@@ -460,10 +463,11 @@ jobs:
           RELEASE_ID=""
           RELEASE_JSON=""
           BODY_ESCAPED=$(echo "$UPDATE_CONTENT" | jq -Rs .)
+          # 修改：target_commitish 从写死 main 改为当前触发分支
           PAYLOAD=$(jq -n \
             --arg tag_name "$TAG_NAME" \
             --arg name "$RELEASE_NAME" \
-            --arg target_commitish "main" \
+            --arg target_commitish "$CURRENT_BRANCH" \
             --argjson prerelease "$PRERELEASE" \
             "{
               tag_name: \$tag_name,
